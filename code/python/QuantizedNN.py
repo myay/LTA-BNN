@@ -82,6 +82,7 @@ class QuantizedLinear(nn.Linear):
         self.training = None
         self.tlu_comp = None
         self.thresholds = None
+        self.nr_xnor_gates = 64
         super(QuantizedLinear, self).__init__(*args, **kwargs)
 
     def forward(self, input):
@@ -102,12 +103,12 @@ class QuantizedLinear(nn.Linear):
 
             # TLU-computation
             if self.tlu_comp is not None:
-                # print("Executing with TLU")
+                print("Executing with TLU: ", self.name)
                 # print("Input shape: ", input.shape)
                 # print("Weight shape: ", quantized_weight.shape)
                 # print("Output shape: ", output.shape)
                 # preparations:
-                n = 32
+                n = self.nr_xnor_gates
                 # wm_rows: 2048 (weight.shape[0])
                 # wm_cols: 3136 (weight.shape[1])
                 # im_cols = 1000 (input.shape[0])
@@ -128,8 +129,8 @@ class QuantizedLinear(nn.Linear):
                 # print("B:", output_b)
                 # print("O: ", output)
 
-                correct = torch.eq(output_b, output)
-                correct = (~correct).sum().item()
+                # correct = torch.eq(output_b, output)
+                # correct = (~correct).sum().item()
                 # print("correctness: ", correct)
                 output = output_b
                 # print("wm_row", wm_row)

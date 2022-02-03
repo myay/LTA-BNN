@@ -38,7 +38,8 @@ __global__ void customconv1d_kernel(
     int cycle_counter = 0; // nr of cycles the tlu has executed at present
     float cycles = weight.size(1) / nr_xnor_gates; // nr of cycles the tlu has to execute
 
-    float threshold_for_sample = threshold[c] / cycles;
+    float threshold_for_sample = round(threshold[c] / cycles);
+    float last_threshold_for_sample = 0;
     int comparison = 0;
 
     // #if 1
@@ -54,29 +55,32 @@ __global__ void customconv1d_kernel(
       sub_popcnt += weight[c][i] * input[d][i];
       cycle_counter += 1;
 
+      // when "nr_xnor_gates" many operations have been computed
       if (cycle_counter == nr_xnor_gates)
       {
-        comparison = (sub_popcnt <= threshold_for_sample);
+        comparison = (sub_popcnt >= threshold_for_sample);
         result += comparison;
         sub_popcnt = 0;
         cycle_counter = 0;
       }
 
-      // // edge case
-      // if (i == weight.size(1)-1)
-      // {
-      //   mult_result += sub_popcnt;
-      //   // TODO: threshold for edge case round(((weight.size(1) % nr_xnor_gates) / nr_xnor_gates)*threshold[c])
-      // }
+      // edge case
+      if ((i == weight.size(1)-1)
+          && ((weight.size(1) % nr_xnor_gates) != 0))
+      {
+        last_threshold_for_sample = round(((weight.size(1) % nr_xnor_gates) / nr_xnor_gates) * threshold[c]);
+        comparison = (sub_popcnt >= last_threshold_for_sample);
+        result += comparison;
+      }
     }
 
     if (result <= cycles/2)
     {
-      output[d][c] = 1;
+      output[d][c] = -1;
     }
     else
     {
-      output[d][c] = -1;
+      output[d][c] = 1;
     }
   }
 }

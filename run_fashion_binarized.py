@@ -346,7 +346,7 @@ def main():
                 # print("thrshold", threshold[1])
                 # print("thrshold", threshold[2])
                 # print("thrshold", threshold[3])
-                threshold = torch.round(threshold)
+                # threshold = torch.floor(threshold)
                 thresholds.append(threshold)
                 # print("threshold", threshold)
     # print("thresholds", thresholds)
@@ -377,7 +377,9 @@ def main():
                 print(layer.name)
                 print(layer.tlu_comp)
 
+    # activate TLU computation and number of xnor gates
     model.tlu_mode = 1
+    model.fc1.nr_xnor_gates = 64
     test(model, device, test_loader)
     # max_test_size = 64
     # test_error_partial(model, device, test_loader, max_test_size)
