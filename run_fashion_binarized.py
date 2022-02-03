@@ -122,7 +122,12 @@ class BNN_FMNIST(nn.Module):
             x = F.max_pool2d(x, 2)
 
             # TLU-mode execution
+            ### remove later
             x = self.conv2(x)
+            x = self.bn2(x)
+            x = self.htanh(x)
+            x = self.qact2(x)
+            ###
             x = F.max_pool2d(x, 2)
 
             x = torch.flatten(x, 1)
