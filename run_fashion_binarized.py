@@ -122,12 +122,7 @@ class BNN_FMNIST(nn.Module):
             x = F.max_pool2d(x, 2)
 
             # TLU-mode execution
-            ### remove later
             x = self.conv2(x)
-            x = self.bn2(x)
-            x = self.htanh(x)
-            x = self.qact2(x)
-            ###
             x = F.max_pool2d(x, 2)
 
             x = torch.flatten(x, 1)
@@ -379,7 +374,9 @@ def main():
 
     # activate TLU computation and number of xnor gates
     model.tlu_mode = 1
-    model.fc1.nr_xnor_gates = 64
+    model.conv2.nr_xnor_gates = 32
+    model.conv2.tlu_comp = 1
+    model.fc1.nr_xnor_gates = 32
     test(model, device, test_loader)
     # max_test_size = 64
     # test_error_partial(model, device, test_loader, max_test_size)

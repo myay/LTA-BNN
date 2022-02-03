@@ -5,7 +5,7 @@ from torch.autograd import Function
 
 import numpy as np
 
-import tluconv1d
+import tluconv1d, tluconv2d
 
 class Quantize(Function):
     @staticmethod
@@ -104,11 +104,11 @@ class QuantizedLinear(nn.Linear):
             # TLU-computation
             if self.tlu_comp is not None:
                 print("Executing with TLU: ", self.name)
+                print("Nr. of xnor gates: ", self.nr_xnor_gates)
                 # print("Input shape: ", input.shape)
                 # print("Weight shape: ", quantized_weight.shape)
                 # print("Output shape: ", output.shape)
                 # preparations:
-                n = self.nr_xnor_gates
                 # wm_rows: 2048 (weight.shape[0])
                 # wm_cols: 3136 (weight.shape[1])
                 # im_cols = 1000 (input.shape[0])
@@ -124,7 +124,7 @@ class QuantizedLinear(nn.Linear):
                 # print(self.thresholds)
 
                 output_b = torch.zeros_like(output)
-                tluconv1d.customconv1d(input_b, weight_b, output_b, self.thresholds, n)
+                tluconv1d.customconv1d(input_b, weight_b, output_b, self.thresholds, self.nr_xnor_gates)
 
                 # print("B:", output_b)
                 # print("O: ", output)
@@ -183,6 +183,7 @@ class QuantizedConv2d(nn.Conv2d):
         self.training = None
         self.tlu_comp = None
         self.thresholds = None
+        self.nr_xnor_gates = None
         super(QuantizedConv2d, self).__init__(*args, **kwargs)
 
     def forward(self, input):
@@ -199,6 +200,38 @@ class QuantizedConv2d(nn.Conv2d):
                 quantized_weight = apply_error_model(quantized_weight, self.error_model)
             output = F.conv2d(input, quantized_weight, self.bias, self.stride,
                               self.padding, self.dilation, self.groups)
+
+            # TLU-computation
+            if self.tlu_comp is not None:
+                print("Executing with TLU: ", self.name)
+                print("Nr. of xnor gates: ", self.nr_xnor_gates)
+
+                # get tensors in form of matrix multiplication
+                h = input.shape[2]
+                w = input.shape[3]
+                kh = self.kernel_size[0]
+                kw = self.kernel_size[1] # kernel size
+                dh = self.stride[0]
+                dw = self.stride[1] # stride
+                size = int((h-kh+2*0)/dh+1)
+
+                # unfold input
+                input_b = F.unfold(input, kernel_size=self.kernel_size, padding=self.padding, stride=self.stride).cuda()
+
+                # unfold kernels
+                weight_b = quantized_weight.view(self.out_channels,-1).cuda()
+
+                # create output buffer
+                output_b = torch.zeros(output.shape[0], weight_b.shape[0], input_b.shape[2]).cuda()
+
+                # make the call to the cuda function
+                tluconv2d.customconv2d(input_b, weight_b, output_b, self.thresholds, self.nr_xnor_gates)
+
+                # create the view that PyTorch expects
+                output_b = output_b.view(output.shape[0], output.shape[1], output.shape[2], output.shape[3])
+
+                output = output_b
+
             return output
         else:
             quantized_weight = None
