@@ -33,9 +33,20 @@ __global__ void customconv1d_kernel(
 
     // every thread is responsible for one sum, there are as many threads as mac sums in output
     output[d][c] = 0; // output buffer
-    float mult_result = 0;
+    float result = 0;
     float sub_popcnt = 0; // used for sub-popcount computations
-    int cycle_counter = 0; // nr of cycles the tlu has executed
+    int cycle_counter = 0; // nr of cycles the tlu has executed at present
+    float cycles = weight.size(1) / nr_xnor_gates; // nr of cycles the tlu has to execute
+
+    float threshold_for_sample = threshold[c] / cycles;
+    int comparison = 0;
+
+    // #if 1
+    //   if (d == 0 && c == 1)
+    //   {
+    //     printf("cycles: %.2f, threshold: %.2f, threshold_sample: %2.f\n", cycles, threshold[c], threshold_for_sample);
+    //   }
+    // #endif
 
     for(int i = 0; i < weight.size(1); i++)
     {
@@ -45,30 +56,28 @@ __global__ void customconv1d_kernel(
 
       if (cycle_counter == nr_xnor_gates)
       {
-        mult_result += sub_popcnt;
+        comparison = (sub_popcnt <= threshold_for_sample);
+        result += comparison;
         sub_popcnt = 0;
         cycle_counter = 0;
       }
 
-      // edge case
-      if (i == weight.size(1)-1)
-      {
-        mult_result += sub_popcnt;
-        // TODO: threshold for edge case round(((weight.size(1) % nr_xnor_gates) / nr_xnor_gates)*threshold[c])
-      }
-
-      #if 0
-        if (d == 0 && c == 0)
-        {
-          // printf("f01: %.2f, f10: %.2f, seed0: %d, cantor_val: %d\n", f01, f10, seed0, cantor_val);
-          printf("threshold: %.2f", threshold[c]);
-          //printf("CUDA shape of weight [%d]", weight.size(0));
-          //printf("CUDA shape of input [%d,%d]",  input.size(0), input.size(1));
-          //printf("CUDA shape of output [%d,%d]\n\n", output.size(0), output.size(1));
-        }
-      #endif
+      // // edge case
+      // if (i == weight.size(1)-1)
+      // {
+      //   mult_result += sub_popcnt;
+      //   // TODO: threshold for edge case round(((weight.size(1) % nr_xnor_gates) / nr_xnor_gates)*threshold[c])
+      // }
     }
-    output[d][c] = mult_result;
+
+    if (result <= cycles/2)
+    {
+      output[d][c] = 1;
+    }
+    else
+    {
+      output[d][c] = -1;
+    }
   }
 }
 

@@ -133,6 +133,8 @@ class BNN_FMNIST(nn.Module):
             x = torch.flatten(x, 1)
             x = self.fc1(x)
 
+            # print("?", x)
+
             x = self.fc2(x)
             x = self.scale(x)
         return x

@@ -107,7 +107,7 @@ class QuantizedLinear(nn.Linear):
                 # print("Weight shape: ", quantized_weight.shape)
                 # print("Output shape: ", output.shape)
                 # preparations:
-                n = 16
+                n = 32
                 # wm_rows: 2048 (weight.shape[0])
                 # wm_cols: 3136 (weight.shape[1])
                 # im_cols = 1000 (input.shape[0])
@@ -120,7 +120,7 @@ class QuantizedLinear(nn.Linear):
                 weight_b = quantized_weight
                 # input_b = torch.transpose(input, 0, 1)
                 input_b = input
-                # print(self.thresholds.shape)
+                # print(self.thresholds)
 
                 output_b = torch.zeros_like(output)
                 tluconv1d.customconv1d(input_b, weight_b, output_b, self.thresholds, n)
@@ -130,7 +130,7 @@ class QuantizedLinear(nn.Linear):
 
                 correct = torch.eq(output_b, output)
                 correct = (~correct).sum().item()
-                print("correctness: ", correct)
+                # print("correctness: ", correct)
                 output = output_b
                 # print("wm_row", wm_row)
                 # print("wm_col", wm_col)
