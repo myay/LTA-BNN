@@ -15,20 +15,12 @@ sys.path.append("code/python/")
 
 from Utils import Scale, Clippy, set_layer_mode, parse_args, dump_exp_data, create_exp_folder, store_exp_data, Criterion, binary_hingeloss
 
+from TLU_Utils import extract_and_set_thresholds, print_layer_data
+
 from QuantizedNN import QuantizedLinear, QuantizedConv2d, QuantizedActivation
 
 import binarizePM1
 import binarizePM1FI
-import quantization
-
-### settings
-# 8 bit
-#python3 run_fashion_quantized_8bit.py --batch-size=256 --epochs=200 --lr=0.0001 --step-size=5 --gamma=0.5
-#scale 1e-5
-
-# 4 bit
-#python3 run_fashion_quantized_8bit.py --batch-size=256 --epochs=200 --lr=0.0001 --step-size=5 --gamma=0.5
-#scale 1e-5
 
 # bit error case
 #python3 run_fashion_bin_fi.py --batch-size=256 --epochs=5 --lr=0.001 --step-size=25 --test-error
@@ -88,50 +80,37 @@ class BNN_FMNIST(nn.Module):
         self.scale = Scale(init_value=1e-3)
 
     def forward(self, x):
-        # normal mode
-        if self.tlu_mode is None:
-            x = self.conv1(x)
-            x = self.bn1(x)
-            x = self.htanh(x)
-            # x = self.relu(x)
-            x = self.qact1(x)
-            x = F.max_pool2d(x, 2)
 
+        # conv2d block 1 does not use TLU (integer inputs)
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.htanh(x)
+        x = self.qact1(x)
+        x = F.max_pool2d(x, 2)
+
+        # conv2d block 2
+        if self.conv2.tlu_comp is not None:
+            x = self.conv2(x)
+        else:
             x = self.conv2(x)
             x = self.bn2(x)
             x = self.htanh(x)
-            # x = self.relu(x)
             x = self.qact2(x)
-            x = F.max_pool2d(x, 2)
+        x = F.max_pool2d(x, 2)
 
-            x = torch.flatten(x, 1)
+        # fc block 1
+        x = torch.flatten(x, 1)
+        if self.fc1.tlu_comp is not None:
+            x = self.fc1(x)
+        else:
             x = self.fc1(x)
             x = self.bn3(x)
             x = self.htanh(x)
-            # x = self.relu(x)
             x = self.qact3(x)
 
-            x = self.fc2(x)
-            x = self.scale(x)
-            # output = F.log_softmax(x, dim=1)
-        else:
-            x = self.conv1(x)
-            x = self.bn1(x)
-            x = self.htanh(x)
-            x = self.qact1(x)
-            x = F.max_pool2d(x, 2)
-
-            # TLU-mode execution
-            x = self.conv2(x)
-            x = F.max_pool2d(x, 2)
-
-            x = torch.flatten(x, 1)
-            x = self.fc1(x)
-
-            # print("?", x)
-
-            x = self.fc2(x)
-            x = self.scale(x)
+        # fc block 2 does not use TLU (no binarization)
+        x = self.fc2(x)
+        x = self.scale(x)
         return x
 
 def train(args, model, device, train_loader, optimizer, epoch):
@@ -248,6 +227,31 @@ def test_error(model, device, test_loader):
                 layer.error_model.resetErrorModel()
     return all_accuracies
 
+def execute_with_TLU(model, device, test_loader):
+    # extract and set thresholds
+    extract_and_set_thresholds(model)
+
+    # activate TLU computation and set number of xnor gates
+    # for each layer here
+    model.conv2.tlu_comp = 1 # set to 1 to activate
+    # model.conv2.nr_xnor_gates = 64
+
+    model.fc1.tlu_comp = 1 # set to 1 to activate
+    # model.fc1.nr_xnor_gates = 64
+
+    # conv1
+    # xnor_gates = [2**x for x in range(2, 9)]
+    xnor_gates = [4*x for x in range(1, 65)]
+
+    all_accuracies = []
+    for nr_xnor in xnor_gates:
+        model.conv2.nr_xnor_gates = nr_xnor
+        model.fc1.nr_xnor_gates = nr_xnor
+        # print_layer_data(model)
+        accuracy = test(model, device, test_loader)
+        # print(accuracy)
+        all_accuracies.append(accuracy)
+    print(all_accuracies)
 
 def main():
     # Training settings
@@ -320,64 +324,12 @@ def main():
 
     # load model
     to_load = "mnist_cnn.pt"
-    print("TO_LOAD", to_load)
+    print("Loaded model: ", to_load)
     model.load_state_dict(torch.load(to_load, map_location='cuda:0'))
-    test(model, device, test_loader)
 
-     # extract thresholds
-    thresholds = []
-    idx = 0
-    for layer in model.children():
-        idx += 1
-        with torch.no_grad():
-            if isinstance(layer, (nn.BatchNorm1d, nn.BatchNorm2d)):
-                # print("idx", idx)
-                # print("Mean", layer.running_mean)
-                # print("Var", layer.running_var)
-                # print("gamma", layer.weight)
-                # print("beta", layer.bias)
-                threshold = layer.running_mean - torch.sqrt(layer.running_var+layer.eps)*layer.bias/layer.weight
-                # print("thrshold", threshold[0])
-                # print("thrshold", threshold[1])
-                # print("thrshold", threshold[2])
-                # print("thrshold", threshold[3])
-                # threshold = torch.floor(threshold)
-                thresholds.append(threshold)
-                # print("threshold", threshold)
-    # print("thresholds", thresholds)
+    # execute with TLU
+    execute_with_TLU(model, device, test_loader)
 
-    # first layer does not use TLU computations
-    thresholds_nofirst = thresholds[1:]
-    # print("thresholds_nofirst", thresholds_nofirst)
-    # print("---")
-
-    # set first and last layer flags
-    model.conv1.first_or_last_layer = 1
-    model.fc2.first_or_last_layer = 1
-
-    # assign thresholds and computation types of layers
-    idx = 0
-    for layer in model.children():
-        with torch.no_grad():
-            if isinstance(layer, (nn.Conv2d, nn.Linear)):
-                if layer.first_or_last_layer is None:
-                    layer.thresholds = thresholds_nofirst[idx]
-                    idx += 1
-                    layer.tlu_comp = 1
-
-    # print layer data
-    for layer in model.children():
-        with torch.no_grad():
-            if isinstance(layer, (nn.Conv2d, nn.Linear)):
-                print(layer.name)
-                print(layer.tlu_comp)
-
-    # activate TLU computation and number of xnor gates
-    model.tlu_mode = 1
-    model.conv2.nr_xnor_gates = 32
-    model.conv2.tlu_comp = 1
-    model.fc1.nr_xnor_gates = 32
-    test(model, device, test_loader)
     # max_test_size = 64
     # test_error_partial(model, device, test_loader, max_test_size)
 if __name__ == '__main__':

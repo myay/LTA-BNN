@@ -103,8 +103,8 @@ class QuantizedLinear(nn.Linear):
 
             # TLU-computation
             if self.tlu_comp is not None:
-                print("Executing with TLU: ", self.name)
-                print("Nr. of xnor gates: ", self.nr_xnor_gates)
+                # print("Executing with TLU: ", self.name)
+                # print("Nr. of xnor gates: ", self.nr_xnor_gates)
                 # print("Input shape: ", input.shape)
                 # print("Weight shape: ", quantized_weight.shape)
                 # print("Output shape: ", output.shape)
@@ -203,8 +203,8 @@ class QuantizedConv2d(nn.Conv2d):
 
             # TLU-computation
             if self.tlu_comp is not None:
-                print("Executing with TLU: ", self.name)
-                print("Nr. of xnor gates: ", self.nr_xnor_gates)
+                # print("Executing with TLU: ", self.name)
+                # print("Nr. of xnor gates: ", self.nr_xnor_gates)
 
                 # get tensors in form of matrix multiplication
                 h = input.shape[2]
