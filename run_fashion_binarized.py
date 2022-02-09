@@ -227,7 +227,7 @@ def test_error(model, device, test_loader):
                 layer.error_model.resetErrorModel()
     return all_accuracies
 
-def execute_with_TLU(model, device, test_loader):
+def execute_with_TLU_layerwise(model, device, test_loader):
     # extract and set thresholds
     extract_and_set_thresholds(model)
 
@@ -251,7 +251,32 @@ def execute_with_TLU(model, device, test_loader):
         accuracy = test(model, device, test_loader)
         # print(accuracy)
         all_accuracies.append(accuracy)
-    print(all_accuracies)
+    print("All accuracies: ", all_accuracies)
+
+def execute_with_TLU(model, device, test_loader, xnor_gates_list):
+    # extract and set thresholds
+    extract_and_set_thresholds(model)
+
+    # activate TLU computation and set number of xnor gates
+    # for each layer here
+    model.conv2.tlu_comp = 1 # set to 1 to activate
+
+    model.fc1.tlu_comp = 1 # set to 1 to activate
+
+    # conv1
+    # xnor_gates = [2**x for x in range(2, 9)]
+    # xnor_gates = [4*x for x in range(1, 65)]
+
+    all_accuracies = []
+    for nr_xnor in xnor_gates_list:
+        model.conv2.nr_xnor_gates = nr_xnor
+        model.fc1.nr_xnor_gates = nr_xnor
+        # print_layer_data(model)
+        accuracy = test(model, device, test_loader)
+        # print(accuracy)
+        all_accuracies.append(accuracy)
+    print("Nr. of XNOR gates: ", xnor_gates_list)
+    print("All accuracies: ", all_accuracies)
 
 def main():
     # Training settings
@@ -328,7 +353,11 @@ def main():
     model.load_state_dict(torch.load(to_load, map_location='cuda:0'))
 
     # execute with TLU
-    execute_with_TLU(model, device, test_loader)
+    # execute_with_TLU_layerwise(model, device, test_loader)
+    p2 = [2**x for x in range(2, 9)]
+    execute_with_TLU(model, device, test_loader, p2)
+    # Nr. of XNOR gates:  [4, 8, 16, 32, 64, 128, 256]
+    # All accuracies:  [10.0, 10.0, 17.549999999999997, 80.07, 83.86, 85.64, 86.87]
 
     # max_test_size = 64
     # test_error_partial(model, device, test_loader, max_test_size)
