@@ -143,19 +143,6 @@ __global__ void customconv1d_kernel(
       }
     }
 
-    if (nr_additional_samples == 1)
-    {
-      // if (result <= round((cycles/2)*2*((cycles-1)/cycles)))
-      if (result <= ((cycles/2) + (cycles-1)/2))
-      {
-        output[d][c] = -1;
-      }
-      else
-      {
-        output[d][c] = 1;
-      }
-    }
-
     if (nr_additional_samples == 0)
     {
       if (result <= cycles/2)

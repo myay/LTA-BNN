@@ -7,7 +7,8 @@ torch::Tensor customconv2d_cuda(
     torch::Tensor weight,
     torch::Tensor output,
     torch::Tensor threshold,
-    int nr_xnor_gates
+    int nr_xnor_gates,
+    int nr_additional_samples
   );
 
 #define CHECK_CUDA(x) AT_ASSERTM(x.device().is_cuda(), #x " must be a CUDA tensor")
@@ -19,13 +20,14 @@ torch::Tensor customconv2d(
     torch::Tensor weight,
     torch::Tensor output,
     torch::Tensor threshold,
-    int nr_xnor_gates
+    int nr_xnor_gates,
+    int nr_additional_samples
   ) {
   CHECK_INPUT(input);
   CHECK_INPUT(weight);
   CHECK_INPUT(output);
   CHECK_INPUT(threshold);
-  return customconv2d_cuda(input, weight, output, threshold, nr_xnor_gates);
+  return customconv2d_cuda(input, weight, output, threshold, nr_xnor_gates, nr_additional_samples);
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {

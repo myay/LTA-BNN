@@ -234,9 +234,11 @@ def execute_with_TLU_layerwise(model, device, test_loader):
     # activate TLU computation, set number of xnor gates, and nr of additional samples (0 by default) for each layer here
     model.conv2.tlu_comp = 1 # set to 1 to activate
     # model.conv2.nr_xnor_gates = 64
+    model.conv2.nr_additional_samples = 2
 
-    model.fc1.tlu_comp = 1 # set to 1 to activate
+    model.fc1.tlu_comp = None # set to 1 to activate
     # model.fc1.nr_xnor_gates = 64
+    model.fc1.nr_additional_samples = 0
 
     # conv1
     # xnor_gates = [2**x for x in range(2, 9)]
@@ -258,9 +260,9 @@ def execute_with_TLU(model, device, test_loader, xnor_gates_list):
 
     # activate TLU computation and set number of xnor gates
     # for each layer here
-    model.conv2.tlu_comp = None # set to 1 to activate
+    model.conv2.tlu_comp = 1 # set to 1 to activate
 
-    model.fc1.tlu_comp = 1 # set to 1 to activate
+    model.fc1.tlu_comp = None # set to 1 to activate
     model.fc1.nr_additional_samples = 2
     # conv1
     # xnor_gates = [2**x for x in range(2, 9)]
@@ -353,9 +355,9 @@ def main():
 
     # execute with TLU
     # execute_with_TLU_layerwise(model, device, test_loader)
-    p2 = [2**x for x in range(2, 13)]
+    # p2 = [2**x for x in range(2, 13)]
     # p2 = [3136]
-    execute_with_TLU(model, device, test_loader, p2)
+    execute_with_TLU_layerwise(model, device, test_loader)
     # Nr. of XNOR gates:  [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
     # s0 All accuracies:
     # [10.0, 35.43, 79.12, 88.34, 89.1, 89.66, 89.4, 89.03999999999999, 87.75, 87.07000000000001, 70.0]
