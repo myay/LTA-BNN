@@ -82,7 +82,8 @@ class QuantizedLinear(nn.Linear):
         self.training = None
         self.tlu_comp = None
         self.thresholds = None
-        self.nr_xnor_gates = 64
+        self.nr_xnor_gates = None
+        self.nr_additional_samples = 0
         super(QuantizedLinear, self).__init__(*args, **kwargs)
 
     def forward(self, input):
@@ -124,7 +125,7 @@ class QuantizedLinear(nn.Linear):
                 # print(self.thresholds)
 
                 output_b = torch.zeros_like(output)
-                tluconv1d.customconv1d(input_b, weight_b, output_b, self.thresholds, self.nr_xnor_gates)
+                tluconv1d.customconv1d(input_b, weight_b, output_b, self.thresholds, self.nr_xnor_gates, self.nr_additional_samples)
 
                 # print("B:", output_b)
                 # print("O: ", output)
@@ -137,6 +138,7 @@ class QuantizedLinear(nn.Linear):
                 # print("wm_col", wm_col)
                 # print("im_col", im_col)
 
+                # cpu-based implementation is too slow
                 # result = []
                 # for i in range(wm_row):
                 #     print("row: ", i)

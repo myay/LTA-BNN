@@ -17,7 +17,8 @@ __global__ void customconv1d_kernel(
     torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> weight,
     torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> output,
     torch::PackedTensorAccessor<scalar_t,1,torch::RestrictPtrTraits,size_t> threshold,
-    int nr_xnor_gates
+    int nr_xnor_gates,
+    int nr_additional_samples
   )
 {
 
@@ -35,6 +36,9 @@ __global__ void customconv1d_kernel(
     output[d][c] = 0; // output buffer
     float result = 0;
     float sub_popcnt = 0; // used for sub-popcount computations
+    float sub_popcnt_1 = 0; // used for sub-popcount computations with one more sample
+    float sub_popcnt_2_1 = 0; // used for sub-popcount computations with two more samples
+    float sub_popcnt_2_2 = 0; // used for sub-popcount computations with two more samples
     int cycle_counter = 0; // nr of cycles the tlu has executed at present
     float cycles = weight.size(1) / nr_xnor_gates; // nr of cycles the tlu has to execute
 
@@ -55,6 +59,25 @@ __global__ void customconv1d_kernel(
       sub_popcnt += weight[c][i] * input[d][i];
       cycle_counter += 1;
 
+      // one more sample, in the middle of two subsequent samples (overlapping)
+      if (nr_additional_samples == 1)
+      {
+        if (i + nr_xnor_gates <= (weight.size(1) - 1))
+        {
+          sub_popcnt_1 += weight[c][i + (nr_xnor_gates / 2)] * input[d][i + (nr_xnor_gates / 2)];
+        }
+      }
+
+      // two more samples
+      if (nr_additional_samples == 2)
+      {
+        if (i + nr_xnor_gates <= (weight.size(1) - 1))
+        {
+          sub_popcnt_2_1 += weight[c][i + round((nr_xnor_gates)*(1/3))] * input[d][i + round((nr_xnor_gates)*(1/3))];
+          sub_popcnt_2_2 += weight[c][i + round((nr_xnor_gates)*(2/3))] * input[d][i + round((nr_xnor_gates)*(2/3))];
+        }
+      }
+
       // when "nr_xnor_gates" many operations have been computed
       if (cycle_counter == nr_xnor_gates)
       {
@@ -62,6 +85,24 @@ __global__ void customconv1d_kernel(
         result += comparison;
         sub_popcnt = 0;
         cycle_counter = 0;
+
+        if (nr_additional_samples == 1)
+        {
+          comparison = (sub_popcnt_1 >= threshold_for_sample);
+          result += comparison;
+          sub_popcnt_1 = 0;
+        }
+
+        if (nr_additional_samples == 2)
+        {
+          comparison = (sub_popcnt_2_1 >= threshold_for_sample);
+          result += comparison;
+          sub_popcnt_2_1 = 0;
+
+          comparison = (sub_popcnt_2_2 >= threshold_for_sample);
+          result += comparison;
+          sub_popcnt_2_2 = 0;
+        }
       }
 
       // edge case
@@ -71,16 +112,60 @@ __global__ void customconv1d_kernel(
         last_threshold_for_sample = round(((weight.size(1) % nr_xnor_gates) / nr_xnor_gates) * threshold[c]);
         comparison = (sub_popcnt >= last_threshold_for_sample);
         result += comparison;
+        // giving less weight in the majority vote for small samples
+        // result += ((weight.size(1) % nr_xnor_gates) / nr_xnor_gates)*comparison;
       }
     }
 
-    if (result <= cycles/2)
+    if (nr_additional_samples == 2)
     {
-      output[d][c] = -1;
+      // if (result <= round((cycles/2)*2*((cycles-1)/cycles)))
+      if (result <= ((cycles/2) + 2*((cycles-1)/2)))
+      {
+        output[d][c] = -1;
+      }
+      else
+      {
+        output[d][c] = 1;
+      }
     }
-    else
+
+    if (nr_additional_samples == 1)
     {
-      output[d][c] = 1;
+      // if (result <= round((cycles/2)*2*((cycles-1)/cycles)))
+      if (result <= ((cycles/2) + (cycles-1)/2))
+      {
+        output[d][c] = -1;
+      }
+      else
+      {
+        output[d][c] = 1;
+      }
+    }
+
+    if (nr_additional_samples == 1)
+    {
+      // if (result <= round((cycles/2)*2*((cycles-1)/cycles)))
+      if (result <= ((cycles/2) + (cycles-1)/2))
+      {
+        output[d][c] = -1;
+      }
+      else
+      {
+        output[d][c] = 1;
+      }
+    }
+
+    if (nr_additional_samples == 0)
+    {
+      if (result <= cycles/2)
+      {
+        output[d][c] = -1;
+      }
+      else
+      {
+        output[d][c] = 1;
+      }
     }
   }
 }
@@ -90,7 +175,8 @@ torch::Tensor customconv1d_cuda(
   torch::Tensor weight,
   torch::Tensor output,
   torch::Tensor threshold,
-  int nr_xnor_gates
+  int nr_xnor_gates,
+  int nr_additional_samples
 ) {
   // The number of thread blocks in a grid is usually dictated by the size of the data being processed, which typically exceeds the number of processors in the system.
   // dim3 threadsPerBlock(8,8,8)
@@ -118,7 +204,8 @@ torch::Tensor customconv1d_cuda(
         weight.packed_accessor<scalar_t,2,torch::RestrictPtrTraits,size_t>(),
         output.packed_accessor<scalar_t,2,torch::RestrictPtrTraits,size_t>(),
         threshold.packed_accessor<scalar_t,1,torch::RestrictPtrTraits,size_t>(),
-        nr_xnor_gates
+        nr_xnor_gates,
+        nr_additional_samples
     );
   }));
 
