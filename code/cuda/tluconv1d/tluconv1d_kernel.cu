@@ -18,7 +18,8 @@ __global__ void customconv1d_kernel(
     torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> output,
     torch::PackedTensorAccessor<scalar_t,1,torch::RestrictPtrTraits,size_t> threshold,
     int nr_xnor_gates,
-    int nr_additional_samples
+    int nr_additional_samples,
+    int majv_shift
   )
 {
 
@@ -120,7 +121,7 @@ __global__ void customconv1d_kernel(
     if (nr_additional_samples == 2)
     {
       // if (result <= round((cycles/2)*2*((cycles-1)/cycles)))
-      if (result <= ((cycles/2) + 2*((cycles-1)/2)))
+      if (result <= ((cycles/2) + 2*((cycles-1)/2) + majv_shift))
       {
         output[d][c] = -1;
       }
@@ -133,7 +134,7 @@ __global__ void customconv1d_kernel(
     if (nr_additional_samples == 1)
     {
       // if (result <= round((cycles/2)*2*((cycles-1)/cycles)))
-      if (result <= ((cycles/2) + (cycles-1)/2))
+      if (result <= ((cycles/2) + ((cycles-1)/2) + majv_shift))
       {
         output[d][c] = -1;
       }
@@ -145,7 +146,7 @@ __global__ void customconv1d_kernel(
 
     if (nr_additional_samples == 0)
     {
-      if (result <= cycles/2)
+      if (result <= ((cycles/2) + majv_shift))
       {
         output[d][c] = -1;
       }
@@ -163,7 +164,8 @@ torch::Tensor customconv1d_cuda(
   torch::Tensor output,
   torch::Tensor threshold,
   int nr_xnor_gates,
-  int nr_additional_samples
+  int nr_additional_samples,
+  int majv_shift
 ) {
   // The number of thread blocks in a grid is usually dictated by the size of the data being processed, which typically exceeds the number of processors in the system.
   // dim3 threadsPerBlock(8,8,8)
@@ -192,7 +194,8 @@ torch::Tensor customconv1d_cuda(
         output.packed_accessor<scalar_t,2,torch::RestrictPtrTraits,size_t>(),
         threshold.packed_accessor<scalar_t,1,torch::RestrictPtrTraits,size_t>(),
         nr_xnor_gates,
-        nr_additional_samples
+        nr_additional_samples,
+        majv_shift
     );
   }));
 

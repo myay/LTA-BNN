@@ -84,6 +84,7 @@ class QuantizedLinear(nn.Linear):
         self.thresholds = None
         self.nr_xnor_gates = None
         self.nr_additional_samples = 0
+        self.majv_shift = 0
         super(QuantizedLinear, self).__init__(*args, **kwargs)
 
     def forward(self, input):
@@ -125,7 +126,7 @@ class QuantizedLinear(nn.Linear):
                 # print(self.thresholds)
 
                 output_b = torch.zeros_like(output)
-                tluconv1d.customconv1d(input_b, weight_b, output_b, self.thresholds, self.nr_xnor_gates, self.nr_additional_samples)
+                tluconv1d.customconv1d(input_b, weight_b, output_b, self.thresholds, self.nr_xnor_gates, self.nr_additional_samples, self.majv_shift)
 
                 # print("B:", output_b)
                 # print("O: ", output)
@@ -187,6 +188,7 @@ class QuantizedConv2d(nn.Conv2d):
         self.thresholds = None
         self.nr_xnor_gates = None
         self.nr_additional_samples = 0
+        self.majv_shift = 0
         super(QuantizedConv2d, self).__init__(*args, **kwargs)
 
     def forward(self, input):
@@ -228,7 +230,7 @@ class QuantizedConv2d(nn.Conv2d):
                 output_b = torch.zeros(output.shape[0], weight_b.shape[0], input_b.shape[2]).cuda()
 
                 # make the call to the cuda function
-                tluconv2d.customconv2d(input_b, weight_b, output_b, self.thresholds, self.nr_xnor_gates, self.nr_additional_samples)
+                tluconv2d.customconv2d(input_b, weight_b, output_b, self.thresholds, self.nr_xnor_gates, self.nr_additional_samples, self.majv_shift)
 
                 # create the view that PyTorch expects
                 output_b = output_b.view(output.shape[0], output.shape[1], output.shape[2], output.shape[3])
