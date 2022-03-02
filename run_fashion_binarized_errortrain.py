@@ -81,17 +81,17 @@ class BNN_FMNIST(nn.Module):
         self.fc2 = QuantizedLinear(2048, 10, quantization=binarizepm1, error_model=None, quantize_train=q_train, quantize_eval=q_eval, bias=False)
         # self.fc2 = nn.Linear(2048, 10)
         self.scale = Scale(init_value=1e-3)
-
-        # self.conv2.nr_xnor_gates = current_xc
-        # self.conv2.nr_additional_samples = 0
-        # self.conv2.majv_shift = 0
+        # !!!
+        self.conv2.nr_xnor_gates = current_xc
+        self.conv2.nr_additional_samples = 0
+        self.conv2.majv_shift = 0
 
         self.fc1.nr_xnor_gates = current_xc
         self.fc1.nr_additional_samples = 0
         self.fc1.majv_shift = 0
 
     def forward(self, x):
-
+        # !!!
         extract_and_set_thresholds(self)
 
         # conv2d block 1 does not use TLU (integer inputs)
@@ -103,15 +103,15 @@ class BNN_FMNIST(nn.Module):
 
         # conv2d block 2
         xt1 = x
-        # self.conv2.tlu_comp = None
-        # xt1 = x.clone().detach()
+        self.conv2.tlu_comp = None
+        xt1 = x.clone().detach()
         x = self.conv2(x)
         x = self.bn2(x)
         x = self.htanh(x)
         x = self.qact2(x)
         # TLU-based execution
-        # self.conv2.tlu_comp = 1 # for training with errors
-        # x.data.copy_(self.conv2(xt1).data)
+        self.conv2.tlu_comp = 1 # for training with errors
+        x.data.copy_(self.conv2(xt1).data)
         x = F.max_pool2d(x, 2)
 
         # fc block 1
@@ -301,8 +301,8 @@ def execute_with_TLU(model, device, test_loader):
 
     # activate TLU computation and set number of xnor gates
     # for each layer here
-    model.conv2.tlu_comp = None # set to 1 to activate
-
+    # !!!
+    model.conv2.tlu_comp = 1 # set to 1 to activate
     model.fc1.tlu_comp = 1 # set to 1 to activate
 
     xnor_gates_list = [2**x for x in range(2, 9)]
@@ -323,7 +323,8 @@ def execute_with_TLU(model, device, test_loader):
 
     print("XNOR gates: ", xnor_gates_list)
     print("Accuracy: ", all_accuracies)
-    # model.conv2.nr_xnor_gates = current_xc
+    # !!!
+    model.conv2.nr_xnor_gates = current_xc
     model.fc1.nr_xnor_gates = current_xc
 
 def main():
@@ -360,7 +361,8 @@ def main():
         print("--- XNOR GATES: ", current_xc)
 
         model = BNN_FMNIST().to(device)
-        # model.conv2.nr_xnor_gates = current_xc
+        # !!!
+        model.conv2.nr_xnor_gates = current_xc
         model.fc1.nr_xnor_gates = current_xc
         # create experiment folder and file
         to_dump_path = create_exp_folder(model)

@@ -6,10 +6,11 @@ Supported:
 - TLU computation for Linear and Conv2d layers
 - Variable number of xnor gates
 - Additional sampling windows (1-2 more)
-- Variable majority vote shift 
+- Variable majority vote shift
+- Training with TLU-based execution
 
 TODOs:
-- Error probability sampling from TLU-based execution
+- Local thresholds for each sub-popcount
 - Saving training state of BNN for retraining
 - Other BNN models, e.g. CIFAR10 and CIFAR100
 
