@@ -47,7 +47,7 @@ def extract_and_set_thresholds(model):
                 if layer.first_or_last_layer is None:
                     layer.thresholds = thresholds_nofirst[idx]
                     idx += 1
-                    layer.tlu_comp = 1
+                    # layer.tlu_comp = 1
 
 def print_layer_data(model):
     layer_idx = 0

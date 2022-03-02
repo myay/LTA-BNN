@@ -52,6 +52,9 @@ cel_test = Criterion(method=nn.CrossEntropyLoss(reduction="none"), name="CEL_tes
 q_train = True # quantization during training
 q_eval = True # quantization during evaluation
 
+nr_xnor_const = [4,8,16,32,64,128,256]
+current_xc = 4
+
 class BNN_FMNIST(nn.Module):
     def __init__(self):
         super(BNN_FMNIST, self).__init__()
@@ -79,7 +82,17 @@ class BNN_FMNIST(nn.Module):
         # self.fc2 = nn.Linear(2048, 10)
         self.scale = Scale(init_value=1e-3)
 
+        # self.conv2.nr_xnor_gates = current_xc
+        # self.conv2.nr_additional_samples = 0
+        # self.conv2.majv_shift = 0
+
+        self.fc1.nr_xnor_gates = current_xc
+        self.fc1.nr_additional_samples = 0
+        self.fc1.majv_shift = 0
+
     def forward(self, x):
+
+        extract_and_set_thresholds(self)
 
         # conv2d block 1 does not use TLU (integer inputs)
         x = self.conv1(x)
@@ -89,28 +102,35 @@ class BNN_FMNIST(nn.Module):
         x = F.max_pool2d(x, 2)
 
         # conv2d block 2
-        if self.conv2.tlu_comp is not None:
-            x = self.conv2(x)
-        else:
-            x = self.conv2(x)
-            x = self.bn2(x)
-            x = self.htanh(x)
-            x = self.qact2(x)
+        xt1 = x
+        # self.conv2.tlu_comp = None
+        # xt1 = x.clone().detach()
+        x = self.conv2(x)
+        x = self.bn2(x)
+        x = self.htanh(x)
+        x = self.qact2(x)
+        # TLU-based execution
+        # self.conv2.tlu_comp = 1 # for training with errors
+        # x.data.copy_(self.conv2(xt1).data)
         x = F.max_pool2d(x, 2)
 
         # fc block 1
         x = torch.flatten(x, 1)
-        if self.fc1.tlu_comp is not None:
-            x = self.fc1(x)
-        else:
-            x = self.fc1(x)
-            x = self.bn3(x)
-            x = self.htanh(x)
-            x = self.qact3(x)
+        xt2 = x
+        self.fc1.tlu_comp = None
+        xt2 = x.clone().detach()
+        x = self.fc1(x)
+        x = self.bn3(x)
+        x = self.htanh(x)
+        x = self.qact3(x)
+        # TLU-based execution
+        self.fc1.tlu_comp = 1
+        x.data.copy_(self.fc1(xt2).data)
 
         # fc block 2 does not use TLU (no binarization)
         x = self.fc2(x)
         x = self.scale(x)
+
         return x
 
 def train(args, model, device, train_loader, optimizer, epoch):
@@ -126,12 +146,12 @@ def train(args, model, device, train_loader, optimizer, epoch):
         loss = criterion(output, target).mean()
         loss.backward()
         optimizer.step()
-        if batch_idx % args.log_interval == 0:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch, batch_idx * len(data), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), loss.item()))
-            if args.dry_run:
-                break
+        # if batch_idx % args.log_interval == 0:
+        #     print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+        #         epoch, batch_idx * len(data), len(train_loader.dataset),
+        #         100. * batch_idx / len(train_loader), loss.item()))
+        #     if args.dry_run:
+        #         break
 
 
 def test(model, device, test_loader, pr=1):
@@ -232,12 +252,12 @@ def execute_with_TLU_layerwise(model, device, test_loader):
     extract_and_set_thresholds(model)
 
     # activate TLU computation, set number of xnor gates, and nr of additional samples (0 by default) for each layer here
-    model.conv2.tlu_comp = None # set to 1 to activate
+    model.conv2.tlu_comp = 1 # set to 1 to activate
     # model.conv2.nr_xnor_gates = 64
     model.conv2.nr_additional_samples = 0
     model.conv2.majv_shift = 0
 
-    model.fc1.tlu_comp = 1 # set to 1 to activate
+    model.fc1.tlu_comp = None # set to 1 to activate
     # model.fc1.nr_xnor_gates = 64
     model.fc1.nr_additional_samples = 0
     model.fc1.majv_shift = 0
@@ -275,18 +295,17 @@ def execute_with_TLU_layerwise(model, device, test_loader):
             print("\n>> Add. samples: {}, Majv-shift: {}".format(additional_sample, majv_shift))
             print("Accuracies: \n", all_accuracies)
 
-def execute_with_TLU(model, device, test_loader, xnor_gates_list):
+def execute_with_TLU(model, device, test_loader):
     # extract and set thresholds
     extract_and_set_thresholds(model)
 
     # activate TLU computation and set number of xnor gates
     # for each layer here
-    model.conv2.tlu_comp = 1 # set to 1 to activate
+    model.conv2.tlu_comp = None # set to 1 to activate
 
-    model.fc1.tlu_comp = None # set to 1 to activate
-    model.fc1.nr_additional_samples = 2
-    # conv1
-    # xnor_gates = [2**x for x in range(2, 9)]
+    model.fc1.tlu_comp = 1 # set to 1 to activate
+
+    xnor_gates_list = [2**x for x in range(2, 9)]
     # xnor_gates = [4*x for x in range(1, 65)]
 
     all_accuracies = []
@@ -294,11 +313,18 @@ def execute_with_TLU(model, device, test_loader, xnor_gates_list):
         model.conv2.nr_xnor_gates = nr_xnor
         model.fc1.nr_xnor_gates = nr_xnor
         # print_layer_data(model)
-        accuracy = test(model, device, test_loader)
+        accuracy = test(model, device, test_loader, pr=None)
         # print(accuracy)
         all_accuracies.append(accuracy)
-    print("Nr. of XNOR gates: ", xnor_gates_list)
-    print("All accuracies: ", all_accuracies)
+
+    # for idx, acc in enumerate(all_accuracies):
+    #     print("XNOR gates: ", xnor_gates_list[idx])
+    #     print("Accuracy: ", all_accuracies[idx])
+
+    print("XNOR gates: ", xnor_gates_list)
+    print("Accuracy: ", all_accuracies)
+    # model.conv2.nr_xnor_gates = current_xc
+    model.fc1.nr_xnor_gates = current_xc
 
 def main():
     # Training settings
@@ -329,59 +355,65 @@ def main():
     train_loader = torch.utils.data.DataLoader(dataset1,**train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
-    model = BNN_FMNIST().to(device)
+    for xnor_gates_n in nr_xnor_const:
+        current_xc = xnor_gates_n
+        print("--- XNOR GATES: ", current_xc)
 
-    # create experiment folder and file
-    to_dump_path = create_exp_folder(model)
-    if not os.path.exists(to_dump_path):
-        open(to_dump_path, 'w').close()
+        model = BNN_FMNIST().to(device)
+        # model.conv2.nr_xnor_gates = current_xc
+        model.fc1.nr_xnor_gates = current_xc
+        # create experiment folder and file
+        to_dump_path = create_exp_folder(model)
+        if not os.path.exists(to_dump_path):
+            open(to_dump_path, 'w').close()
 
-    # optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    optimizer = Clippy(model.parameters(), lr=args.lr)
+        # optimizer = optim.Adam(model.parameters(), lr=args.lr)
+        optimizer = Clippy(model.parameters(), lr=args.lr)
 
-    scheduler = StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)
+        scheduler = StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)
 
-    time_elapsed = 0
-    times = []
-    # for epoch in range(1, args.epochs + 1):
-    #     torch.cuda.synchronize()
-    #     since = int(round(time.time()*1000))
-    #     #
-    #     train(args, model, device, train_loader, optimizer, epoch)
-    #     #
-    #     time_elapsed += int(round(time.time()*1000)) - since
-    #     print('Epoch training time elapsed: {}ms'.format(int(round(time.time()*1000)) - since))
-    #     # test(model, device, train_loader)
-    #     since = int(round(time.time()*1000))
-    #     #
-    #     test(model, device, test_loader)
-    #     #
-    #     time_elapsed += int(round(time.time()*1000)) - since
-    #     print('Test time elapsed: {}ms'.format(int(round(time.time()*1000)) - since))
-    #     # test(model, device, train_loader)
-    #     scheduler.step()
+        time_elapsed = 0
+        times = []
+        for epoch in range(1, args.epochs + 1):
+            torch.cuda.synchronize()
+            since = int(round(time.time()*1000))
+            #
+            train(args, model, device, train_loader, optimizer, epoch)
+            #
+            time_elapsed += int(round(time.time()*1000)) - since
+            # print('Epoch training time elapsed: {}ms'.format(int(round(time.time()*1000)) - since))
+            # test(model, device, train_loader)
+            since = int(round(time.time()*1000))
+            #
+            # test(model, device, test_loader)
+            # execute_with_TLU(model, device, test_loader)
+            #
+            time_elapsed += int(round(time.time()*1000)) - since
+            # print('Test time elapsed: {}ms'.format(int(round(time.time()*1000)) - since))
+            # test(model, device, train_loader)
+            scheduler.step()
 
-    if args.test_error:
-        all_accuracies = test_error(model, device, test_loader)
-        to_dump_data = dump_exp_data(model, args, all_accuracies)
-        store_exp_data(to_dump_path, to_dump_data)
+        if args.test_error:
+            all_accuracies = test_error(model, device, test_loader)
+            to_dump_data = dump_exp_data(model, args, all_accuracies)
+            store_exp_data(to_dump_path, to_dump_data)
 
-    if args.save_model:
-        torch.save(model.state_dict(), "mnist_cnn.pt")
+        if args.save_model:
+            torch.save(model.state_dict(), "mnist_cnn.pt")
 
-    # load model
-    to_load = "mnist_cnn.pt"
-    print("Loaded model: ", to_load)
-    model.load_state_dict(torch.load(to_load, map_location='cuda:0'))
+        # load model
+        # to_load = "mnist_cnn.pt"
+        # print("Loaded model: ", to_load)
+        # model.load_state_dict(torch.load(to_load, map_location='cuda:0'))
 
-    # execute with TLU
-    # execute_with_TLU_layerwise(model, device, test_loader)
-    # p2 = [2**x for x in range(2, 13)]
-    # p2 = [3136]
-    execute_with_TLU_layerwise(model, device, test_loader)
-    # Nr. of XNOR gates:  [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
+        # execute with TLU
+        # execute_with_TLU_layerwise(model, device, test_loader)
+        # p2 = [2**x for x in range(2, 13)]
+        # p2 = [3136]
+        execute_with_TLU(model, device, test_loader)
+        # Nr. of XNOR gates:  [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
 
-    # max_test_size = 64
-    # test_error_partial(model, device, test_loader, max_test_size)
+        # max_test_size = 64
+        # test_error_partial(model, device, test_loader, max_test_size)
 if __name__ == '__main__':
     main()
