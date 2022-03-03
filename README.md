@@ -7,6 +7,7 @@ Supported:
 - Variable number of xnor gates
 - Additional sampling windows (1-2 more)
 - Variable majority vote shift
+- Threshold scaling (factor 2 supported)
 - Training with TLU-based execution
 
 TODOs:

@@ -19,7 +19,8 @@ __global__ void customconv2d_kernel(
     torch::PackedTensorAccessor<scalar_t,1,torch::RestrictPtrTraits,size_t> threshold,
     int nr_xnor_gates,
     int nr_additional_samples,
-    int majv_shift
+    int majv_shift,
+    int threshold_scaling
   )
 {
 
@@ -45,6 +46,10 @@ __global__ void customconv2d_kernel(
     float cycles = weight.size(1) / nr_xnor_gates; // nr of cycles the tlu has to execute
 
     float threshold_for_sample = round(threshold[c] / cycles);
+    if (threshold_scaling == 2)
+    {
+      threshold_for_sample = 2*floorf(threshold_for_sample/2);
+    }
     float last_threshold_for_sample = 0;
     int comparison = 0;
 
@@ -165,7 +170,8 @@ torch::Tensor customconv2d_cuda(
   torch::Tensor threshold,
   int nr_xnor_gates,
   int nr_additional_samples,
-  int majv_shift
+  int majv_shift,
+  int threshold_scaling
 ) {
   // The number of thread blocks in a grid is usually dictated by the size of the data being processed, which typically exceeds the number of processors in the system.
   // dim3 threadsPerBlock(8,8,8)
@@ -199,7 +205,8 @@ torch::Tensor customconv2d_cuda(
         threshold.packed_accessor<scalar_t,1,torch::RestrictPtrTraits,size_t>(),
         nr_xnor_gates,
         nr_additional_samples,
-        majv_shift
+        majv_shift,
+        threshold_scaling
     );
   }));
 

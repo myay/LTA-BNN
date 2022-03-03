@@ -19,7 +19,8 @@ __global__ void customconv1d_kernel(
     torch::PackedTensorAccessor<scalar_t,1,torch::RestrictPtrTraits,size_t> threshold,
     int nr_xnor_gates,
     int nr_additional_samples,
-    int majv_shift
+    int majv_shift,
+    int threshold_scaling
   )
 {
 
@@ -42,18 +43,19 @@ __global__ void customconv1d_kernel(
     float sub_popcnt_2_2 = 0; // used for sub-popcount computations with two more samples
     int cycle_counter = 0; // nr of cycles the tlu has executed at present
     float cycles = weight.size(1) / nr_xnor_gates; // nr of cycles the tlu has to execute
-
     float threshold_for_sample = round(threshold[c] / cycles);
+    if (threshold_scaling == 2)
+    {
+      threshold_for_sample = 2*floorf(threshold_for_sample/2);
+    }
     float last_threshold_for_sample = 0;
     int comparison = 0;
-
     // #if 1
-    //   if (d == 0 && c == 1)
+    //   if (d == 0 && c == 2)
     //   {
-    //     printf("cycles: %.2f, threshold: %.2f, threshold_sample: %2.f\n", cycles, threshold[c], threshold_for_sample);
+    //     printf("a cycles: %.2f, threshold: %.2f, threshold_sample: %2.f\n", cycles, threshold[c], threshold_for_sample);
     //   }
     // #endif
-
     for(int i = 0; i < weight.size(1); i++)
     {
       //printf("Thread: (%d,%d,%d)\nWeight: %.4f, Input: %.4f\n", c, d, e, weight[c][i], input[d][i][e]);
@@ -165,7 +167,8 @@ torch::Tensor customconv1d_cuda(
   torch::Tensor threshold,
   int nr_xnor_gates,
   int nr_additional_samples,
-  int majv_shift
+  int majv_shift,
+  int threshold_scaling
 ) {
   // The number of thread blocks in a grid is usually dictated by the size of the data being processed, which typically exceeds the number of processors in the system.
   // dim3 threadsPerBlock(8,8,8)
@@ -195,7 +198,8 @@ torch::Tensor customconv1d_cuda(
         threshold.packed_accessor<scalar_t,1,torch::RestrictPtrTraits,size_t>(),
         nr_xnor_gates,
         nr_additional_samples,
-        majv_shift
+        majv_shift,
+        threshold_scaling
     );
   }));
 

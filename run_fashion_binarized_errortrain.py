@@ -61,7 +61,7 @@ class BNN_FMNIST(nn.Module):
         self.htanh = nn.Hardtanh()
         self.relu = nn.ReLU()
         self.name = "BNN_FMNIST"
-        self.method = {"type": "flip", "p": binarizepm1fi.p}
+        # self.method = {"type": "flip", "p": binarizepm1fi.p}
         self.traincriterion = cel_train
         self.testcriterion = cel_test
         self.tlu_mode = None
@@ -142,8 +142,8 @@ def train(args, model, device, train_loader, optimizer, epoch):
         optimizer.zero_grad()
         output = model(data)
         # loss = F.nll_loss(output, target)
-        criterion = nn.CrossEntropyLoss(reduction="none")
-        loss = criterion(output, target).mean()
+        criterion = Criterion(binary_hingeloss, "MHL_train", param=128)
+        loss = criterion.applyCriterion(output, target).mean()
         loss.backward()
         optimizer.step()
         # if batch_idx % args.log_interval == 0:
@@ -182,42 +182,6 @@ def test(model, device, test_loader, pr=1):
 
     return accuracy
 
-def test_error_partial(model, device, test_loader, max_test_size):
-    model.eval()
-    set_layer_mode(model, "eval") # propagate informaton about eval to all layers
-
-    all_accuracies = []
-    np_acc = []
-
-    # accuracy = test(model, device, test_loader, pr=1)
-
-    for reps in range(0,1):
-        correct = 0
-        tested_inputs = 0
-        with torch.no_grad():
-            for data, target in test_loader:
-                if tested_inputs < max_test_size:
-                    data, target = data.to(device), target.to(device)
-                    output = model(data)
-                    pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
-                    correct += pred.eq(target.view_as(pred)).sum().item()
-                    tested_inputs += 1
-                    print('\nTest set ({} examples tested): Accuracy: {}/{} ({:.2f}%)\n'.format(
-                        tested_inputs, correct, tested_inputs,
-                        100. * correct / tested_inputs))
-                else:
-                    break
-
-        print('\nTest set (final): Accuracy: {}/{} ({:.2f}%)\n'.format(correct, tested_inputs,
-            100. * correct / tested_inputs))
-
-    accs_mean = np.mean(np.array(np_acc), axis=0)
-    accs_min = np.min(np.array(np_acc), axis=0)
-    accs_max = np.max(np.array(np_acc), axis=0)
-    print("{} {} {}".format(accs_mean, accs_max - accs_mean, accs_mean - accs_min))
-
-    return all_accuracies
-
 def test_error(model, device, test_loader):
     model.eval()
     set_layer_mode(model, "eval") # propagate informaton about eval to all layers
@@ -246,54 +210,6 @@ def test_error(model, device, test_loader):
             if layer.error_model is not None:
                 layer.error_model.resetErrorModel()
     return all_accuracies
-
-def execute_with_TLU_layerwise(model, device, test_loader):
-    # extract and set thresholds
-    extract_and_set_thresholds(model)
-
-    # activate TLU computation, set number of xnor gates, and nr of additional samples (0 by default) for each layer here
-    model.conv2.tlu_comp = 1 # set to 1 to activate
-    # model.conv2.nr_xnor_gates = 64
-    model.conv2.nr_additional_samples = 0
-    model.conv2.majv_shift = 0
-
-    model.fc1.tlu_comp = None # set to 1 to activate
-    # model.fc1.nr_xnor_gates = 64
-    model.fc1.nr_additional_samples = 0
-    model.fc1.majv_shift = 0
-
-    # conv1
-    # xnor_gates = [2**x for x in range(2, 9)]
-    # xnor_gates = [32, 64]
-
-    # xnor_gates = [4*x for x in range(1, 65)]
-    # majv_shifts = [m for m in range(2, 7)]
-    # additional_samples = [0, 1, 2]
-
-    xnor_gates = [32]
-    majv_shifts = [2]
-    additional_samples = [0]
-
-    # print("\n")
-    for majv_shift in majv_shifts:
-        print("\n --- MAJV-SHIFT --- \n", majv_shift)
-        for additional_sample in additional_samples:
-            all_accuracies = []
-            for nr_xnor in xnor_gates:
-                # conv2d settings
-                model.conv2.nr_xnor_gates = nr_xnor
-                model.conv2.nr_additional_samples = additional_sample
-                model.conv2.majv_shift = majv_shift
-                # fc settings
-                model.fc1.nr_xnor_gates = nr_xnor
-                model.fc1.nr_additional_samples = additional_sample
-                model.fc1.majv_shift = majv_shift
-                # print_layer_data(model)
-                accuracy = test(model, device, test_loader, pr=None)
-                # print(accuracy)
-                all_accuracies.append(accuracy)
-            print("\n>> Add. samples: {}, Majv-shift: {}".format(additional_sample, majv_shift))
-            print("Accuracies: \n", all_accuracies)
 
 def execute_with_TLU(model, device, test_loader):
     # extract and set thresholds

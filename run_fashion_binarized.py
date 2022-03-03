@@ -232,15 +232,18 @@ def execute_with_TLU_layerwise(model, device, test_loader):
     extract_and_set_thresholds(model)
 
     # activate TLU computation, set number of xnor gates, and nr of additional samples (0 by default) for each layer here
-    model.conv2.tlu_comp = None # set to 1 to activate
+    model.conv2.tlu_comp = 1 # set to 1 to activate
     # model.conv2.nr_xnor_gates = 64
     model.conv2.nr_additional_samples = 0
     model.conv2.majv_shift = 0
+    model.conv2.threshold_scaling = 0
 
-    model.fc1.tlu_comp = 1 # set to 1 to activate
+    model.fc1.tlu_comp = None # set to 1 to activate
     # model.fc1.nr_xnor_gates = 64
     model.fc1.nr_additional_samples = 0
     model.fc1.majv_shift = 0
+    model.fc1.nr_additional_samples = 0
+    model.fc1.threshold_scaling = 0
 
     # conv1
     # xnor_gates = [2**x for x in range(2, 9)]
@@ -250,8 +253,8 @@ def execute_with_TLU_layerwise(model, device, test_loader):
     # majv_shifts = [m for m in range(2, 7)]
     # additional_samples = [0, 1, 2]
 
-    xnor_gates = [32]
-    majv_shifts = [2]
+    xnor_gates = [4*x for x in range(1, 65)]
+    majv_shifts = [0]
     additional_samples = [0]
 
     # print("\n")

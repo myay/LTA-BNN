@@ -10,7 +10,6 @@ from QuantizedNN import QuantizedLinear, QuantizedConv2d, QuantizedActivation
 def binary_hingeloss(yhat, y, b=128):
     #print("yhat", yhat.mean(dim=1))
     #print("y", y)
-    # print("BINHINGE")
     y_enc = 2 * torch.nn.functional.one_hot(y, yhat.shape[-1]) - 1.0
     #print("y_enc", y_enc)
     l = (b - y_enc * yhat).clamp(min=0)
@@ -82,7 +81,7 @@ def parse_args(parser):
 def dump_exp_data(model, args, all_accuracies):
     to_dump = dict()
     to_dump["model"] = model.name
-    to_dump["method"] = model.method
+    # to_dump["method"] = model.method
     to_dump["batchsize"] = args.batch_size
     to_dump["epochs"] = args.epochs
     to_dump["learning_rate"] = args.lr
