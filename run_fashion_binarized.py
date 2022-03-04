@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
+import numpy as np
 import time
 import json
 import sys
@@ -58,7 +59,7 @@ class BNN_FMNIST(nn.Module):
         self.htanh = nn.Hardtanh()
         self.relu = nn.ReLU()
         self.name = "BNN_FMNIST"
-        self.method = {"type": "flip", "p": binarizepm1fi.p}
+        # self.method = {"type": "flip", "p": binarizepm1fi.p}
         self.traincriterion = cel_train
         self.testcriterion = cel_test
         self.tlu_mode = None
@@ -122,8 +123,8 @@ def train(args, model, device, train_loader, optimizer, epoch):
         optimizer.zero_grad()
         output = model(data)
         # loss = F.nll_loss(output, target)
-        criterion = nn.CrossEntropyLoss(reduction="none")
-        loss = criterion(output, target).mean()
+        criterion = Criterion(binary_hingeloss, "MHL_train", param=128)
+        loss = criterion.applyCriterion(output, target).mean()
         loss.backward()
         optimizer.step()
         if batch_idx % args.log_interval == 0:
@@ -232,18 +233,19 @@ def execute_with_TLU_layerwise(model, device, test_loader):
     extract_and_set_thresholds(model)
 
     # activate TLU computation, set number of xnor gates, and nr of additional samples (0 by default) for each layer here
-    model.conv2.tlu_comp = 1 # set to 1 to activate
+    model.conv2.tlu_comp = None # set to 1 to activate
     # model.conv2.nr_xnor_gates = 64
     model.conv2.nr_additional_samples = 0
     model.conv2.majv_shift = 0
     model.conv2.threshold_scaling = 0
 
-    model.fc1.tlu_comp = None # set to 1 to activate
+    model.fc1.tlu_comp = 1 # set to 1 to activate
     # model.fc1.nr_xnor_gates = 64
     model.fc1.nr_additional_samples = 0
     model.fc1.majv_shift = 0
     model.fc1.nr_additional_samples = 0
     model.fc1.threshold_scaling = 0
+    model.fc1.popc_acc_activate = 1
 
     # conv1
     # xnor_gates = [2**x for x in range(2, 9)]
@@ -253,7 +255,8 @@ def execute_with_TLU_layerwise(model, device, test_loader):
     # majv_shifts = [m for m in range(2, 7)]
     # additional_samples = [0, 1, 2]
 
-    xnor_gates = [4*x for x in range(1, 65)]
+    # xnor_gates = [4*x for x in range(1, 65)]
+    xnor_gates = [32]
     majv_shifts = [0]
     additional_samples = [0]
 
@@ -370,10 +373,11 @@ def main():
         store_exp_data(to_dump_path, to_dump_data)
 
     if args.save_model:
-        torch.save(model.state_dict(), "mnist_cnn.pt")
+        torch.save(model.state_dict(), "mnist_cnn_mhl.pt")
 
+    #'''
     # load model
-    to_load = "mnist_cnn.pt"
+    to_load = "mnist_cnn_mhl.pt"
     print("Loaded model: ", to_load)
     model.load_state_dict(torch.load(to_load, map_location='cuda:0'))
 
@@ -382,9 +386,19 @@ def main():
     # p2 = [2**x for x in range(2, 13)]
     # p2 = [3136]
     execute_with_TLU_layerwise(model, device, test_loader)
+    # popcnts = np.tonumpy(model.fc1.popc_acc)
+    list_nparray = []
+    list_tensors = model.fc1.popc_acc
+    for tens in list_tensors:
+        list_nparray.append(tens.cpu().numpy())
+    np_list = np.array(list_nparray)
+
+    np_list = np_list.sum(axis=0)
+    print(np_list)
     # Nr. of XNOR gates:  [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
 
     # max_test_size = 64
     # test_error_partial(model, device, test_loader, max_test_size)
+    #'''
 if __name__ == '__main__':
     main()

@@ -86,6 +86,8 @@ class QuantizedLinear(nn.Linear):
         self.nr_additional_samples = 0
         self.majv_shift = 0
         self.threshold_scaling = 0
+        self.popc_acc = []
+        self.popc_acc_activate = 0
         super(QuantizedLinear, self).__init__(*args, **kwargs)
 
     def forward(self, input):
@@ -117,8 +119,11 @@ class QuantizedLinear(nn.Linear):
                 # im_cols = 1000 (input.shape[0])
                 # output matrix: [im_cols x wm_rows]
 
+                # nr. of neurons
                 wm_row = quantized_weight.shape[0]
+                # nr. of weights (and inputs)
                 wm_col = quantized_weight.shape[1]
+                # nr. of images in a batch
                 im_col = input.shape[0]
 
                 weight_b = quantized_weight
@@ -126,9 +131,20 @@ class QuantizedLinear(nn.Linear):
                 input_b = input
                 # print(self.thresholds)
 
-                output_b = torch.zeros_like(output)
-                tluconv1d.customconv1d(input_b, weight_b, output_b, self.thresholds, self.nr_xnor_gates, self.nr_additional_samples, self.majv_shift, self.threshold_scaling)
+                # prepare tensor for storing accumulated popcount results
+                cycles = wm_col / self.nr_xnor_gates
+                if wm_col % self.nr_xnor_gates != 0:
+                    cycles += 1
+                cycles = int(cycles)
+                popc_acc = torch.zeros(wm_row, cycles).cuda()
 
+                output_b = torch.zeros_like(output)
+                tluconv1d.customconv1d(input_b, weight_b, output_b, self.thresholds, popc_acc, self.nr_xnor_gates, self.nr_additional_samples, self.majv_shift, self.threshold_scaling, self.popc_acc_activate)
+
+                if self.popc_acc_activate == 1:
+                    self.popc_acc.append(popc_acc)
+
+                # print("pop acc", popc_acc)    
                 # print("B:", output_b)
                 # print("O: ", output)
 

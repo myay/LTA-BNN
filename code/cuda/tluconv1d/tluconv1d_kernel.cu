@@ -13,14 +13,16 @@
 
 template <typename scalar_t>
 __global__ void customconv1d_kernel(
-    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> input,
-    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> weight,
-    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> output,
-    torch::PackedTensorAccessor<scalar_t,1,torch::RestrictPtrTraits,size_t> threshold,
+    torch::PackedTensorAccessor32<scalar_t,2,torch::RestrictPtrTraits> input,
+    torch::PackedTensorAccessor32<scalar_t,2,torch::RestrictPtrTraits> weight,
+    torch::PackedTensorAccessor32<scalar_t,2,torch::RestrictPtrTraits> output,
+    torch::PackedTensorAccessor32<scalar_t,1,torch::RestrictPtrTraits> threshold,
+    torch::PackedTensorAccessor32<scalar_t,2,torch::RestrictPtrTraits> popc_acc,
     int nr_xnor_gates,
     int nr_additional_samples,
     int majv_shift,
-    int threshold_scaling
+    int threshold_scaling,
+    int popc_acc_activate
   )
 {
 
@@ -41,6 +43,7 @@ __global__ void customconv1d_kernel(
     float sub_popcnt_1 = 0; // used for sub-popcount computations with one more sample
     float sub_popcnt_2_1 = 0; // used for sub-popcount computations with two more samples
     float sub_popcnt_2_2 = 0; // used for sub-popcount computations with two more samples
+    int global_cycles = 0; // count all cycles
     int cycle_counter = 0; // nr of cycles the tlu has executed at present
     float cycles = weight.size(1) / nr_xnor_gates; // nr of cycles the tlu has to execute
     float threshold_for_sample = round(threshold[c] / cycles);
@@ -61,6 +64,14 @@ __global__ void customconv1d_kernel(
       //printf("Thread: (%d,%d,%d)\nWeight: %.4f, Input: %.4f\n", c, d, e, weight[c][i], input[d][i][e]);
       sub_popcnt += weight[c][i] * input[d][i];
       cycle_counter += 1;
+
+      // test for cycles
+      // #if 1
+      //   if (d == 0 && c == 0)
+      //   {
+      //     printf("cycles: %d, gcycles: %d\n", cycle_counter, global_cycles);
+      //   }
+      // #endif
 
       // one more sample, in the middle of two subsequent samples (overlapping)
       if (nr_additional_samples == 1)
@@ -84,10 +95,27 @@ __global__ void customconv1d_kernel(
       // when "nr_xnor_gates" many operations have been computed
       if (cycle_counter == nr_xnor_gates)
       {
+
+        if (popc_acc_activate == 1)
+        {
+          //popc_acc[c][d] += sub_popcnt;
+          // use atomic add instead
+          // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#atomic-functions
+          atomicAdd((float*)(&popc_acc[c][global_cycles]), (sub_popcnt+nr_xnor_gates));
+          // popc_acc[c][d] += sub_popcnt;
+          // #if 1
+          //   if (d == 0 && c == 0)
+          //   {
+          //     printf("sub_popcnt: %.2f, pointer1: %p\n", sub_popcnt, &popc_acc[c][d]);
+          //   }
+          // #endif
+        }
+
         comparison = (sub_popcnt >= threshold_for_sample);
         result += comparison;
         sub_popcnt = 0;
         cycle_counter = 0;
+        global_cycles += 1;
 
         if (nr_additional_samples == 1)
         {
@@ -165,10 +193,12 @@ torch::Tensor customconv1d_cuda(
   torch::Tensor weight,
   torch::Tensor output,
   torch::Tensor threshold,
+  torch::Tensor popc_acc,
   int nr_xnor_gates,
   int nr_additional_samples,
   int majv_shift,
-  int threshold_scaling
+  int threshold_scaling,
+  int popc_acc_activate
 ) {
   // The number of thread blocks in a grid is usually dictated by the size of the data being processed, which typically exceeds the number of processors in the system.
   // dim3 threadsPerBlock(8,8,8)
@@ -192,14 +222,16 @@ torch::Tensor customconv1d_cuda(
 
   AT_DISPATCH_ALL_TYPES(input.type(), "customconv1d_cuda", ([&] {
     customconv1d_kernel<scalar_t><<<blocks, threads>>>(
-        input.packed_accessor<scalar_t,2,torch::RestrictPtrTraits,size_t>(),
-        weight.packed_accessor<scalar_t,2,torch::RestrictPtrTraits,size_t>(),
-        output.packed_accessor<scalar_t,2,torch::RestrictPtrTraits,size_t>(),
-        threshold.packed_accessor<scalar_t,1,torch::RestrictPtrTraits,size_t>(),
+        input.packed_accessor32<scalar_t,2,torch::RestrictPtrTraits>(),
+        weight.packed_accessor32<scalar_t,2,torch::RestrictPtrTraits>(),
+        output.packed_accessor32<scalar_t,2,torch::RestrictPtrTraits>(),
+        threshold.packed_accessor32<scalar_t,1,torch::RestrictPtrTraits>(),
+        popc_acc.packed_accessor32<scalar_t,2,torch::RestrictPtrTraits>(),
         nr_xnor_gates,
         nr_additional_samples,
         majv_shift,
-        threshold_scaling
+        threshold_scaling,
+        popc_acc_activate
     );
   }));
 
