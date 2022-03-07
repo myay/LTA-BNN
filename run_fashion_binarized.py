@@ -14,6 +14,9 @@ import os
 from datetime import datetime
 sys.path.append("code/python/")
 
+from scipy.stats import norm
+import matplotlib.pyplot as plt
+
 from Utils import Scale, Clippy, set_layer_mode, parse_args, dump_exp_data, create_exp_folder, store_exp_data, Criterion, binary_hingeloss
 
 from TLU_Utils import extract_and_set_thresholds, print_layer_data
@@ -123,7 +126,8 @@ def train(args, model, device, train_loader, optimizer, epoch):
         optimizer.zero_grad()
         output = model(data)
         # loss = F.nll_loss(output, target)
-        criterion = Criterion(binary_hingeloss, "MHL_train", param=128)
+        # criterion = Criterion(binary_hingeloss, "MHL_train", param=128)
+        criterion = Criterion(nn.CrossEntropyLoss(reduction="none"), "CEL")
         loss = criterion.applyCriterion(output, target).mean()
         loss.backward()
         optimizer.step()
@@ -228,7 +232,7 @@ def test_error(model, device, test_loader):
                 layer.error_model.resetErrorModel()
     return all_accuracies
 
-def execute_with_TLU_layerwise(model, device, test_loader):
+def execute_with_TLU_layerwise(model, device, test_loader, activate=0):
     # extract and set thresholds
     extract_and_set_thresholds(model)
 
@@ -245,7 +249,7 @@ def execute_with_TLU_layerwise(model, device, test_loader):
     model.fc1.majv_shift = 0
     model.fc1.nr_additional_samples = 0
     model.fc1.threshold_scaling = 0
-    model.fc1.popc_acc_activate = 1
+    # model.fc1.popc_acc_activate = activate
 
     # conv1
     # xnor_gates = [2**x for x in range(2, 9)]
@@ -349,23 +353,23 @@ def main():
 
     time_elapsed = 0
     times = []
-    # for epoch in range(1, args.epochs + 1):
-    #     torch.cuda.synchronize()
-    #     since = int(round(time.time()*1000))
-    #     #
-    #     train(args, model, device, train_loader, optimizer, epoch)
-    #     #
-    #     time_elapsed += int(round(time.time()*1000)) - since
-    #     print('Epoch training time elapsed: {}ms'.format(int(round(time.time()*1000)) - since))
-    #     # test(model, device, train_loader)
-    #     since = int(round(time.time()*1000))
-    #     #
-    #     test(model, device, test_loader)
-    #     #
-    #     time_elapsed += int(round(time.time()*1000)) - since
-    #     print('Test time elapsed: {}ms'.format(int(round(time.time()*1000)) - since))
-    #     # test(model, device, train_loader)
-    #     scheduler.step()
+    for epoch in range(1, args.epochs + 1):
+        torch.cuda.synchronize()
+        since = int(round(time.time()*1000))
+        #
+        train(args, model, device, train_loader, optimizer, epoch)
+        #
+        time_elapsed += int(round(time.time()*1000)) - since
+        print('Epoch training time elapsed: {}ms'.format(int(round(time.time()*1000)) - since))
+        # test(model, device, train_loader)
+        since = int(round(time.time()*1000))
+        #
+        test(model, device, test_loader)
+        #
+        time_elapsed += int(round(time.time()*1000)) - since
+        print('Test time elapsed: {}ms'.format(int(round(time.time()*1000)) - since))
+        # test(model, device, train_loader)
+        scheduler.step()
 
     if args.test_error:
         all_accuracies = test_error(model, device, test_loader)
@@ -373,28 +377,52 @@ def main():
         store_exp_data(to_dump_path, to_dump_data)
 
     if args.save_model:
-        torch.save(model.state_dict(), "mnist_cnn_mhl.pt")
+        torch.save(model.state_dict(), "fmnist_cnn_cel_100.pt")
 
     #'''
     # load model
-    to_load = "mnist_cnn_mhl.pt"
-    print("Loaded model: ", to_load)
-    model.load_state_dict(torch.load(to_load, map_location='cuda:0'))
+    # to_load = "mnist_cnn_mhl.pt"
+    # print("Loaded model: ", to_load)
+    # model.load_state_dict(torch.load(to_load, map_location='cuda:0'))
 
     # execute with TLU
     # execute_with_TLU_layerwise(model, device, test_loader)
     # p2 = [2**x for x in range(2, 13)]
     # p2 = [3136]
-    execute_with_TLU_layerwise(model, device, test_loader)
-    # popcnts = np.tonumpy(model.fc1.popc_acc)
+    # threshold correction based on percentage
+    '''
+    model.fc1.threshold_correction = 0
+    model.fc1.popc_acc_activate = 1
+    execute_with_TLU_layerwise(model, device, test_loader, activate=1)
     list_nparray = []
     list_tensors = model.fc1.popc_acc
     for tens in list_tensors:
         list_nparray.append(tens.cpu().numpy())
     np_list = np.array(list_nparray)
+    np_list = (np_list.sum(axis=0)/640000) + 0.5
+    for idx, threshold in enumerate(model.fc1.thresholds.cpu().numpy()):
+        np_list[idx] *= threshold
+    new_thresholds_tensor = torch.Tensor(np_list).cuda()
+    # pass new thresholds to layer
+    model.fc1.popc_acc = new_thresholds_tensor
+    model.fc1.threshold_correction = 1
+    model.fc1.popc_acc_activate = 0
+    print("\n\nwith correction")
+    execute_with_TLU_layerwise(model, device, test_loader, activate=0)
+    '''
 
-    np_list = np_list.sum(axis=0)
-    print(np_list)
+    # plot histogram of values
+    # mu, std = norm.fit(np_list.flatten())
+    # s = np.random.normal(mu, std, 10)
+    # plt.hist(np_list.flatten(), bins=50, density=True, alpha=0.6, color='g')
+    # xmin, xmax = plt.xlim()
+    # x = np.linspace(xmin, xmax, 1000)
+    # p = norm.pdf(x, mu, std)
+    # plt.plot(x, p, 'k', linewidth=2)
+    # title = "Fit results: mu = %.2f,  std = %.2f" % (mu, std)
+    # plt.title(title)
+    # plt.savefig("distr_popc.pdf", format="pdf")
+
     # Nr. of XNOR gates:  [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
 
     # max_test_size = 64

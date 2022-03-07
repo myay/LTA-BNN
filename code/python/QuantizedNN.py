@@ -88,6 +88,7 @@ class QuantizedLinear(nn.Linear):
         self.threshold_scaling = 0
         self.popc_acc = []
         self.popc_acc_activate = 0
+        self.threshold_correction = 0
         super(QuantizedLinear, self).__init__(*args, **kwargs)
 
     def forward(self, input):
@@ -139,12 +140,12 @@ class QuantizedLinear(nn.Linear):
                 popc_acc = torch.zeros(wm_row, cycles).cuda()
 
                 output_b = torch.zeros_like(output)
-                tluconv1d.customconv1d(input_b, weight_b, output_b, self.thresholds, popc_acc, self.nr_xnor_gates, self.nr_additional_samples, self.majv_shift, self.threshold_scaling, self.popc_acc_activate)
+                tluconv1d.customconv1d(input_b, weight_b, output_b, self.thresholds, popc_acc, self.nr_xnor_gates, self.nr_additional_samples, self.majv_shift, self.threshold_scaling, self.popc_acc_activate, self.threshold_correction)
 
-                if self.popc_acc_activate == 1:
+                if self.popc_acc_activate == 1 and self.threshold_correction == 0:
                     self.popc_acc.append(popc_acc)
 
-                # print("pop acc", popc_acc)    
+                # print("pop acc", popc_acc)
                 # print("B:", output_b)
                 # print("O: ", output)
 

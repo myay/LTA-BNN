@@ -52,7 +52,8 @@ cel_test = Criterion(method=nn.CrossEntropyLoss(reduction="none"), name="CEL_tes
 q_train = True # quantization during training
 q_eval = True # quantization during evaluation
 
-nr_xnor_const = [4,8,16,32,64,128,256]
+nr_xnor_const = [4,8,12,16,24,32,48,64,96,128,192,256]
+# nr_xnor_const = [4,8]
 current_xc = 4
 
 class BNN_FMNIST(nn.Module):
@@ -143,6 +144,7 @@ def train(args, model, device, train_loader, optimizer, epoch):
         output = model(data)
         # loss = F.nll_loss(output, target)
         criterion = Criterion(binary_hingeloss, "MHL_train", param=128)
+        # criterion = Criterion(nn.CrossEntropyLoss(reduction="none"), "CEL")
         loss = criterion.applyCriterion(output, target).mean()
         loss.backward()
         optimizer.step()
@@ -221,7 +223,9 @@ def execute_with_TLU(model, device, test_loader):
     model.conv2.tlu_comp = 1 # set to 1 to activate
     model.fc1.tlu_comp = 1 # set to 1 to activate
 
-    xnor_gates_list = [2**x for x in range(2, 9)]
+    # xnor_gates_list = [2**x for x in range(2, 9)]
+    xnor_gates_list = [4,8,12,16,24,32,48,64,96,128,192,256]
+    # xnor_gates_list = [4,8]
     # xnor_gates = [4*x for x in range(1, 65)]
 
     all_accuracies = []
@@ -317,7 +321,7 @@ def main():
             store_exp_data(to_dump_path, to_dump_data)
 
         if args.save_model:
-            torch.save(model.state_dict(), "mnist_cnn.pt")
+            torch.save(model.state_dict(), "fmnist_cnn_xnor_mhl_{}.pt".format(current_xc))
 
         # load model
         # to_load = "mnist_cnn.pt"

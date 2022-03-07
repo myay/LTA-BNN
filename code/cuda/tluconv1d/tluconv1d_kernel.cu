@@ -22,7 +22,8 @@ __global__ void customconv1d_kernel(
     int nr_additional_samples,
     int majv_shift,
     int threshold_scaling,
-    int popc_acc_activate
+    int popc_acc_activate,
+    int threshold_correction
   )
 {
 
@@ -110,8 +111,15 @@ __global__ void customconv1d_kernel(
           //   }
           // #endif
         }
+        if (threshold_correction == 1)
+        {
+          comparison = (sub_popcnt >= (popc_acc[c][global_cycles]/cycles));
+        }
+        else
+        {
+          comparison = (sub_popcnt >= threshold_for_sample);
+        }
 
-        comparison = (sub_popcnt >= threshold_for_sample);
         result += comparison;
         sub_popcnt = 0;
         cycle_counter = 0;
@@ -140,8 +148,17 @@ __global__ void customconv1d_kernel(
       if ((i == weight.size(1)-1)
           && ((weight.size(1) % nr_xnor_gates) != 0))
       {
-        last_threshold_for_sample = round(((weight.size(1) % nr_xnor_gates) / nr_xnor_gates) * threshold[c]);
-        comparison = (sub_popcnt >= last_threshold_for_sample);
+        if (threshold_correction == 1)
+        {
+          // comparison = (sub_popcnt >= (popc_acc[c][global_cycles]/cycles));
+          last_threshold_for_sample = round(((weight.size(1) % nr_xnor_gates) / nr_xnor_gates) * (popc_acc[c][global_cycles]/cycles));
+          comparison = (sub_popcnt >= last_threshold_for_sample);
+        }
+        else
+        {
+          last_threshold_for_sample = round(((weight.size(1) % nr_xnor_gates) / nr_xnor_gates) * threshold[c]);
+          comparison = (sub_popcnt >= last_threshold_for_sample);
+        }
         result += comparison;
         // giving less weight in the majority vote for small samples
         // result += ((weight.size(1) % nr_xnor_gates) / nr_xnor_gates)*comparison;
@@ -198,7 +215,8 @@ torch::Tensor customconv1d_cuda(
   int nr_additional_samples,
   int majv_shift,
   int threshold_scaling,
-  int popc_acc_activate
+  int popc_acc_activate,
+  int threshold_correction
 ) {
   // The number of thread blocks in a grid is usually dictated by the size of the data being processed, which typically exceeds the number of processors in the system.
   // dim3 threadsPerBlock(8,8,8)
@@ -231,7 +249,8 @@ torch::Tensor customconv1d_cuda(
         nr_additional_samples,
         majv_shift,
         threshold_scaling,
-        popc_acc_activate
+        popc_acc_activate,
+        threshold_correction
     );
   }));
 
