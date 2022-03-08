@@ -237,7 +237,7 @@ def execute_with_TLU_layerwise(model, device, test_loader, activate=0):
     extract_and_set_thresholds(model)
 
     # activate TLU computation, set number of xnor gates, and nr of additional samples (0 by default) for each layer here
-    model.conv2.tlu_comp = None # set to 1 to activate
+    model.conv2.tlu_comp = 1 # set to 1 to activate
     # model.conv2.nr_xnor_gates = 64
     model.conv2.nr_additional_samples = 0
     model.conv2.majv_shift = 0
@@ -247,7 +247,6 @@ def execute_with_TLU_layerwise(model, device, test_loader, activate=0):
     # model.fc1.nr_xnor_gates = 64
     model.fc1.nr_additional_samples = 0
     model.fc1.majv_shift = 0
-    model.fc1.nr_additional_samples = 0
     model.fc1.threshold_scaling = 0
     # model.fc1.popc_acc_activate = activate
 
@@ -259,8 +258,8 @@ def execute_with_TLU_layerwise(model, device, test_loader, activate=0):
     # majv_shifts = [m for m in range(2, 7)]
     # additional_samples = [0, 1, 2]
 
-    # xnor_gates = [4*x for x in range(1, 65)]
-    xnor_gates = [32]
+    xnor_gates = [4*x for x in range(1, 65)]
+    # xnor_gates = [32]
     majv_shifts = [0]
     additional_samples = [0]
 
@@ -284,6 +283,10 @@ def execute_with_TLU_layerwise(model, device, test_loader, activate=0):
                 all_accuracies.append(accuracy)
             print("\n>> Add. samples: {}, Majv-shift: {}".format(additional_sample, majv_shift))
             print("Accuracies: \n", all_accuracies)
+            print("FOR TIKZ")
+            for idx, exp in enumerate(xnor_gates):
+                print_str = "({}, {})".format(xnor_gates[idx], all_accuracies[idx])
+                print(print_str)
 
 def execute_with_TLU(model, device, test_loader, xnor_gates_list):
     # extract and set thresholds
@@ -353,43 +356,44 @@ def main():
 
     time_elapsed = 0
     times = []
-    for epoch in range(1, args.epochs + 1):
-        torch.cuda.synchronize()
-        since = int(round(time.time()*1000))
-        #
-        train(args, model, device, train_loader, optimizer, epoch)
-        #
-        time_elapsed += int(round(time.time()*1000)) - since
-        print('Epoch training time elapsed: {}ms'.format(int(round(time.time()*1000)) - since))
-        # test(model, device, train_loader)
-        since = int(round(time.time()*1000))
-        #
-        test(model, device, test_loader)
-        #
-        time_elapsed += int(round(time.time()*1000)) - since
-        print('Test time elapsed: {}ms'.format(int(round(time.time()*1000)) - since))
-        # test(model, device, train_loader)
-        scheduler.step()
-
-    if args.test_error:
-        all_accuracies = test_error(model, device, test_loader)
-        to_dump_data = dump_exp_data(model, args, all_accuracies)
-        store_exp_data(to_dump_path, to_dump_data)
-
-    if args.save_model:
-        torch.save(model.state_dict(), "fmnist_cnn_cel_100.pt")
+    # for epoch in range(1, args.epochs + 1):
+    #     torch.cuda.synchronize()
+    #     since = int(round(time.time()*1000))
+    #     #
+    #     train(args, model, device, train_loader, optimizer, epoch)
+    #     #
+    #     time_elapsed += int(round(time.time()*1000)) - since
+    #     print('Epoch training time elapsed: {}ms'.format(int(round(time.time()*1000)) - since))
+    #     # test(model, device, train_loader)
+    #     since = int(round(time.time()*1000))
+    #     #
+    #     test(model, device, test_loader)
+    #     #
+    #     time_elapsed += int(round(time.time()*1000)) - since
+    #     print('Test time elapsed: {}ms'.format(int(round(time.time()*1000)) - since))
+    #     # test(model, device, train_loader)
+    #     scheduler.step()
+    #
+    # if args.test_error:
+    #     all_accuracies = test_error(model, device, test_loader)
+    #     to_dump_data = dump_exp_data(model, args, all_accuracies)
+    #     store_exp_data(to_dump_path, to_dump_data)
+    #
+    # if args.save_model:
+    #     torch.save(model.state_dict(), "fmnist_cnn_cel_100.pt")
 
     #'''
     # load model
-    # to_load = "mnist_cnn_mhl.pt"
-    # print("Loaded model: ", to_load)
-    # model.load_state_dict(torch.load(to_load, map_location='cuda:0'))
+    to_load = "models/train_tlu/fashion/fmnist_cnn_xnor_mhl_32.pt"
+    print("Loaded model: ", to_load)
+    model.load_state_dict(torch.load(to_load, map_location='cuda:0'))
 
     # execute with TLU
-    # execute_with_TLU_layerwise(model, device, test_loader)
+    execute_with_TLU_layerwise(model, device, test_loader)
     # p2 = [2**x for x in range(2, 13)]
     # p2 = [3136]
     # threshold correction based on percentage
+
     '''
     model.fc1.threshold_correction = 0
     model.fc1.popc_acc_activate = 1
