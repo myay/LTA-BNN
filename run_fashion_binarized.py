@@ -25,7 +25,13 @@ from TLU_Utils import extract_and_set_thresholds, execute_with_TLU_FashionCNN, p
 
 from QuantizedNN import QuantizedLinear, QuantizedConv2d, QuantizedActivation
 
-from BNNModels import BNN_FMNIST
+from BNNModels import BNN_FASHION_CNN
+
+# training
+# python3 run_fashion_binarized.py --model=BNN_FASHION_CNN --train-model=1 --batch-size=256 --epochs=1 --lr=0.001 --step-size=10 --gpu-num=0 --save-model="model_name.pt"
+
+# inference
+# python3 run_fashion_binarized.py --model=BNN_FASHION_CNN --load-model-path="model_name.pt" --tlu-mode=1 --test-batch-size=1000 --gpu-num=0
 
 def main():
     # Training settings
@@ -37,6 +43,14 @@ def main():
 
     device = torch.device("cuda" if use_cuda else "cpu")
 
+    available_gpus = [i for i in range(torch.cuda.device_count())]
+    print("Available GPUs: ", available_gpus)
+    gpu_select = args.gpu_num
+    # change GPU that is being used
+    torch.cuda.set_device(gpu_select)
+    # which GPU is currently used
+    print("Currently used GPU: ", torch.cuda.current_device())
+
     train_kwargs = {'batch_size': args.batch_size}
     test_kwargs = {'batch_size': args.test_batch_size}
     if use_cuda:
@@ -46,17 +60,69 @@ def main():
         train_kwargs.update(cuda_kwargs)
         test_kwargs.update(cuda_kwargs)
 
-    transform=transforms.Compose([
-        transforms.ToTensor(),
-        ])
-    dataset1 = datasets.FashionMNIST('data', train=True, download=True,
-                       transform=transform)
-    dataset2 = datasets.FashionMNIST('data', train=False,
-                       transform=transform)
+    nn_model = None
+    model = None
+    dataset1 = None
+    dataset2 = None
+    if args.model == "BNN_FASHION_CNN":
+        nn_model = BNN_FASHION_CNN
+        model = nn_model().cuda()
+    if args.model == "BNN_FASHION_FC":
+        nn_model = BNN_FASHION_FC
+        model = nn_model().cuda()
+    if args.model == "BNN_CIFAR10_CNN":
+        nn_model = BNN_CIFAR10_CNN
+        model = nn_model().cuda()
+    if args.model == "BNN_CIFAR100_CNN":
+        nn_model = vgg.__dict__[args.vgg_case]()
+        nn_model.features = torch.nn.DataParallel(nn_model.features)
+        model = nn_model.cuda()
+
+    if model.name == "BNN_MNIST":
+        transform=transforms.Compose([
+            transforms.ToTensor(),
+            ])
+        dataset1 = datasets.MNIST('data', train=True, download=True, transform=transform)
+        dataset2 = datasets.MNIST('data', train=False, transform=transform)
+
+    if model.name == "BNN_FASHION_CNN" or model.name == "BNN_FASHION_FC":
+        transform=transforms.Compose([
+            transforms.ToTensor(),
+            ])
+        dataset1 = datasets.FashionMNIST('data', train=True, download=True, transform=transform)
+        dataset2 = datasets.FashionMNIST('data', train=False, transform=transform)
+
+    if model.name == "BNN_CIFAR10_CNN":
+        transform_train=transforms.Compose([
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+            ])
+        transform_test=transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+            ])
+        dataset1 = datasets.CIFAR10('data', train=True, download=True, transform=transform_train)
+        dataset2 = datasets.CIFAR10('data', train=False, transform=transform_test)
+
+    if model.name == "BNN_CIFAR100_CNN":
+        transform_train=transforms.Compose([
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+            ])
+        transform_test=transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+            ])
+        dataset1 = datasets.CIFAR100('data', train=True, download=True, transform=transform_train)
+        dataset2 = datasets.CIFAR100('data', train=False, transform=transform_test)
+
     train_loader = torch.utils.data.DataLoader(dataset1,**train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
-
-    model = BNN_FMNIST().to(device)
+    model = nn_model().to(device)
 
     # create experiment folder and file
     to_dump_path = create_exp_folder(model)
@@ -70,41 +136,45 @@ def main():
 
     time_elapsed = 0
     times = []
-    for epoch in range(1, args.epochs + 1):
-        torch.cuda.synchronize()
-        since = int(round(time.time()*1000))
-        #
-        train(args, model, device, train_loader, optimizer, epoch)
-        #
-        time_elapsed += int(round(time.time()*1000)) - since
-        print('Epoch training time elapsed: {}ms'.format(int(round(time.time()*1000)) - since))
-        # test(model, device, train_loader)
-        since = int(round(time.time()*1000))
-        #
-        test(model, device, test_loader)
-        #
-        time_elapsed += int(round(time.time()*1000)) - since
-        print('Test time elapsed: {}ms'.format(int(round(time.time()*1000)) - since))
-        # test(model, device, train_loader)
-        scheduler.step()
+
+    if args.train_model is not None:
+        for epoch in range(1, args.epochs + 1):
+            torch.cuda.synchronize()
+            since = int(round(time.time()*1000))
+            #
+            train(args, model, device, train_loader, optimizer, epoch)
+            #
+            time_elapsed += int(round(time.time()*1000)) - since
+            print('Epoch training time elapsed: {}ms'.format(int(round(time.time()*1000)) - since))
+            # test(model, device, train_loader)
+            since = int(round(time.time()*1000))
+            #
+            test(model, device, test_loader)
+            #
+            time_elapsed += int(round(time.time()*1000)) - since
+            print('Test time elapsed: {}ms'.format(int(round(time.time()*1000)) - since))
+            # test(model, device, train_loader)
+            scheduler.step()
 
     if args.test_error:
         all_accuracies = test_error(model, device, test_loader)
         to_dump_data = dump_exp_data(model, args, all_accuracies)
         store_exp_data(to_dump_path, to_dump_data)
 
-    if args.save_model:
-        torch.save(model.state_dict(), "fmnist_cnn_cel_1x.pt")
+    if args.save_model is not None:
+        torch.save(model.state_dict(), args.save_model)
 
     #'''
     # load model
     # to_load = "models/train_tlu/fashion/fmnist_cnn_xnor_mhl_32.pt"
-    to_load = "mnist_cnn_mhl.pt"
-    print("Loaded model: ", to_load)
-    model.load_state_dict(torch.load(to_load, map_location='cuda:0'))
+    if args.load_model_path is not None:
+        to_load = args.load_model_path
+        print("Loaded model: ", to_load)
+        model.load_state_dict(torch.load(to_load, map_location='cuda:0'))
 
-    # execute with TLU
-    execute_with_TLU_FashionCNN(model, device, test_loader)
+    if args.tlu_mode is not None:
+        # execute with TLU
+        execute_with_TLU_FashionCNN(model, device, test_loader)
     # p2 = [2**x for x in range(2, 13)]
     # p2 = [3136]
     # threshold correction based on percentage

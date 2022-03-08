@@ -15,11 +15,11 @@ q_train = True # quantization during training
 q_eval = True # quantization during evaluation
 binarizepm1 = Quantization1(binarizePM1.binarize)
 
-class BNN_FMNIST(nn.Module):
+class BNN_FASHION_CNN(nn.Module):
     def __init__(self):
-        super(BNN_FMNIST, self).__init__()
+        super(BNN_FASHION_CNN, self).__init__()
         self.htanh = nn.Hardtanh()
-        self.name = "BNN_FMNIST"
+        self.name = "BNN_FASHION_CNN"
         self.tlu_mode = None
 
         self.conv1 = QuantizedConv2d(1, 64, kernel_size=3, padding=1, padding_mode = 'replicate', stride=1, quantization=binarizepm1, error_model=None, quantize_train=q_train, quantize_eval=q_eval, bias=False)

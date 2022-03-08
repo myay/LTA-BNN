@@ -16,6 +16,12 @@ def set_layer_mode(model, mode):
                 layer.eval = False
 
 def parse_args(parser):
+    parser.add_argument('--model', type=str, default=None,
+                    help='BNN_FASHION_CNN/BNN_CIFAR10_CNN/BNN_CIFAR100_CNN')
+    parser.add_argument('--train-model', type=int, default=None, help='Whether to train a model')
+    parser.add_argument('--load-model-path', type=str, default=None, help='Specify path to model if it should be loaded')
+    parser.add_argument('--tlu-mode', type=int, default=None, help='Whether TLU-based inference should be used')
+    parser.add_argument('--gpu-num', type=int, default=0, metavar='N', help='Specify the GPU on which the training should be performed')
     parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                         help='input batch size for training (default: 64)')
     parser.add_argument('--test-batch-size', type=int, default=1000, metavar='N',
@@ -36,8 +42,8 @@ def parse_args(parser):
                         help='random seed (default: 1)')
     parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                         help='how many batches to wait before logging training status')
-    parser.add_argument('--save-model', action='store_true', default=False,
-                        help='For Saving the current Model')
+    parser.add_argument('--save-model', type=str, default=None,
+                        help='Specify name for saving model')
     parser.add_argument('--test-error', action='store_true', default=False,
                         help='Test accuracy under errors')
 
