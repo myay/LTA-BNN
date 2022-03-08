@@ -113,7 +113,7 @@ __global__ void customconv1d_kernel(
         }
         if (threshold_correction == 1)
         {
-          comparison = (sub_popcnt >= (popc_acc[c][global_cycles]/cycles));
+          comparison = (sub_popcnt >= (popc_acc[c][global_cycles]));
         }
         else
         {

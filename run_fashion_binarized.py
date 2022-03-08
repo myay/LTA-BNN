@@ -33,7 +33,6 @@ from BNNModels import BNN_FASHION_CNN, BNN_CIFAR10_CNN
 # training cifar10
 # run_fashion_binarized.py --model=BNN_CIFAR10_CNN --train-model=1 --batch-size=256 --epochs=2 --lr=0.001 --step-size=50 --gpu-num=0 --save-model="model_cifar10.pt"
 
-
 # inference
 # python3 run_fashion_binarized.py --model=BNN_FASHION_CNN --load-model-path="model_name.pt" --tlu-mode=1 --test-batch-size=1000 --gpu-num=0
 
@@ -182,11 +181,45 @@ def main():
     # p2 = [2**x for x in range(2, 13)]
     # p2 = [3136]
     # threshold correction based on percentage
-
+    '''
+    ### threshold correction based on Fabio's method
+    # get average popcounts of each neuron
+    model.fc1.popc_acc_normal_activate = 1
+    execute_with_TLU_FashionCNN(model, device, test_loader)
+    list_nparray = []
+    list_tensors = model.fc1.popc_acc_normal
+    for tens in list_tensors:
+        list_nparray.append(tens.cpu().numpy())
+    np_list = np.array(list_nparray)
+    average_over_batches = np_list.mean(axis=0)
+    average_over_batches = average_over_batches.mean(axis=0)/model.fc1.cycles
+    # print("avg_over_b", average_over_batches.shape)
+    # get average popcount of each sliding window
+    model.fc1.popc_acc_normal_activate = 0
+    model.fc1.popc_acc_activate = 1
+    execute_with_TLU_FashionCNN(model, device, test_loader, activate=1)
+    list_nparray = []
+    list_tensors = model.fc1.popc_acc
+    for tens in list_tensors:
+        list_nparray.append(tens.cpu().numpy())
+    np_list = np.array(list_nparray)
+    np_list = np_list.mean(axis=0)/10000
+    # print("popc activations", np_list.shape)
+    for idx, threshold in enumerate(model.fc1.thresholds.cpu().numpy()):
+        error = average_over_batches[idx] - np_list[idx]
+        np_list[idx] = error
+    # print("np_list", np_list.shape)
+    print("with correction")
+    model.fc1.popc_acc = torch.Tensor(np_list).cuda()
+    model.fc1.threshold_correction = 1
+    model.fc1.popc_acc_activate = 0
+    execute_with_TLU_FashionCNN(model, device, test_loader, activate=1)
+    '''
+    # threshold correction based on my method
     '''
     model.fc1.threshold_correction = 0
     model.fc1.popc_acc_activate = 1
-    execute_with_TLU_layerwise(model, device, test_loader, activate=1)
+    execute_with_TLU_FashionCNN(model, device, test_loader, activate=1)
     list_nparray = []
     list_tensors = model.fc1.popc_acc
     for tens in list_tensors:
@@ -195,13 +228,13 @@ def main():
     np_list = (np_list.sum(axis=0)/640000) + 0.5
     for idx, threshold in enumerate(model.fc1.thresholds.cpu().numpy()):
         np_list[idx] *= threshold
-    new_thresholds_tensor = torch.Tensor(np_list).cuda()
+    new_thresholds_tensor = torch.Tensor(np_list).cuda()/model.fc1.cycles
     # pass new thresholds to layer
     model.fc1.popc_acc = new_thresholds_tensor
     model.fc1.threshold_correction = 1
     model.fc1.popc_acc_activate = 0
     print("\n\nwith correction")
-    execute_with_TLU_layerwise(model, device, test_loader, activate=0)
+    execute_with_TLU_FashionCNN(model, device, test_loader, activate=0)
     '''
 
     # plot histogram of values

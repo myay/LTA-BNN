@@ -89,6 +89,9 @@ class QuantizedLinear(nn.Linear):
         self.popc_acc = []
         self.popc_acc_activate = 0
         self.threshold_correction = 0
+        self.popc_acc_normal = []
+        self.popc_acc_normal_activate = None
+        self.cycles = 0
         super(QuantizedLinear, self).__init__(*args, **kwargs)
 
     def forward(self, input):
@@ -106,6 +109,9 @@ class QuantizedLinear(nn.Linear):
                 quantized_weight = apply_error_model(quantized_weight, self.error_model)
 
             output = F.linear(input, quantized_weight)
+
+            if self.popc_acc_normal_activate is not None:
+                self.popc_acc_normal.append(output)
 
             # TLU-computation
             if self.tlu_comp is not None:
@@ -137,6 +143,7 @@ class QuantizedLinear(nn.Linear):
                 if wm_col % self.nr_xnor_gates != 0:
                     cycles += 1
                 cycles = int(cycles)
+                self.cycles = cycles
                 popc_acc = torch.zeros(wm_row, cycles).cuda()
 
                 output_b = torch.zeros_like(output)
@@ -208,6 +215,12 @@ class QuantizedConv2d(nn.Conv2d):
         self.nr_additional_samples = 0
         self.majv_shift = 0
         self.threshold_scaling = 0
+        self.popc_acc = []
+        self.popc_acc_activate = 0
+        self.threshold_correction = 0
+        self.popc_acc_normal = []
+        self.popc_acc_normal_activate = None
+        self.cycles = 0
         super(QuantizedConv2d, self).__init__(*args, **kwargs)
 
     def forward(self, input):
@@ -222,8 +235,7 @@ class QuantizedConv2d(nn.Conv2d):
                 quantized_bias = self.bias
             if self.error_model is not None:
                 quantized_weight = apply_error_model(quantized_weight, self.error_model)
-            output = F.conv2d(input, quantized_weight, self.bias, self.stride,
-                              self.padding, self.dilation, self.groups)
+            output = F.conv2d(input, quantized_weight, self.bias, self.stride, self.padding, self.dilation, self.groups)
 
             # TLU-computation
             if self.tlu_comp is not None:
