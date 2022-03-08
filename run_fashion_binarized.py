@@ -25,10 +25,14 @@ from TLU_Utils import extract_and_set_thresholds, execute_with_TLU_FashionCNN, p
 
 from QuantizedNN import QuantizedLinear, QuantizedConv2d, QuantizedActivation
 
-from BNNModels import BNN_FASHION_CNN
+from BNNModels import BNN_FASHION_CNN, BNN_CIFAR10_CNN
 
 # training
 # python3 run_fashion_binarized.py --model=BNN_FASHION_CNN --train-model=1 --batch-size=256 --epochs=1 --lr=0.001 --step-size=10 --gpu-num=0 --save-model="model_name.pt"
+
+# training cifar10
+# run_fashion_binarized.py --model=BNN_CIFAR10_CNN --train-model=1 --batch-size=256 --epochs=2 --lr=0.001 --step-size=50 --gpu-num=0 --save-model="model_cifar10.pt"
+
 
 # inference
 # python3 run_fashion_binarized.py --model=BNN_FASHION_CNN --load-model-path="model_name.pt" --tlu-mode=1 --test-batch-size=1000 --gpu-num=0
