@@ -51,7 +51,7 @@ def extract_and_set_thresholds(model):
                     idx += 1
                     # layer.tlu_comp = 1
 
-def execute_with_TLU_FashionCNN(model, device, test_loader):
+def execute_with_TLU_FashionCNN(model, device, test_loader, xnor_gates_stat):
     # extract and set thresholds
     extract_and_set_thresholds(model)
 
@@ -78,7 +78,7 @@ def execute_with_TLU_FashionCNN(model, device, test_loader):
     # additional_samples = [0, 1, 2]
 
     # xnor_gates = [4*x for x in range(1, 65)]
-    xnor_gates = [32]
+    xnor_gates = [xnor_gates_stat]
     majv_shifts = [0]
     additional_samples = [0]
 

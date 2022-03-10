@@ -113,7 +113,13 @@ __global__ void customconv1d_kernel(
         }
         if (threshold_correction == 1)
         {
-          comparison = (sub_popcnt >= (popc_acc[c][global_cycles]));
+          comparison = (sub_popcnt >= round(popc_acc[c][global_cycles]));
+          // #if 1
+          //   if (d == 0 && c == 0)
+          //   {
+          //     printf("c: %d, cycle_counter: %d, global_cycles: %d, sub_popcnt: %.2f, l_threshold: %.2f, o_threshold: %.2f\n", c, cycle_counter, global_cycles, sub_popcnt, popc_acc[c][global_cycles], threshold_for_sample);
+          //   }
+          // #endif
         }
         else
         {

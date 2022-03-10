@@ -175,9 +175,10 @@ def main():
         print("Loaded model: ", to_load)
         model.load_state_dict(torch.load(to_load, map_location='cuda:0'))
 
+    xnor_gates_stat = 16#1568
     if args.tlu_mode is not None:
         # execute with TLU
-        execute_with_TLU_FashionCNN(model, device, test_loader)
+        execute_with_TLU_FashionCNN(model, device, test_loader, xnor_gates_stat)
     # p2 = [2**x for x in range(2, 13)]
     # p2 = [3136]
     # threshold correction based on percentage
@@ -260,29 +261,34 @@ def main():
     # execute_with_TLU_FashionCNN(model, device, test_loader)
 
     # threshold correction based on my method
-    #'''
-    # model.fc1.threshold_correction = 0
-    # model.fc1.popc_acc_activate = 1
-    # execute_with_TLU_FashionCNN(model, device, test_loader)
-    # list_nparray = []
-    # list_tensors = model.fc1.popc_acc
-    # for tens in list_tensors:
-    #     list_nparray.append(tens.cpu().numpy())
-    # np_list = np.array(list_nparray)
-    # np_list = (np_list.mean(axis=0)/(1000*64))
-    # np_list1 = np_list.copy()
-    # # print(np_list1.min())
-    # for idx, threshold in enumerate(model.fc1.thresholds.cpu().numpy()):
-    #     # np_list[idx] *= threshold
-    #     np_list[idx] = np.array([threshold for x in range(0,model.fc1.cycles)])
-    # new_thresholds_tensor = torch.Tensor(np_list).cuda()/model.fc1.cycles
-    # # pass new thresholds to layer
-    # model.fc1.popc_acc = new_thresholds_tensor
-    # model.fc1.threshold_correction = 1
-    # model.fc1.popc_acc_activate = 0
-    # print("\n\nwith correction")
-    # execute_with_TLU_FashionCNN(model, device, test_loader)
-    #'''
+    '''
+    model.fc1.threshold_correction = 0
+    model.fc1.popc_acc_activate = 1
+    execute_with_TLU_FashionCNN(model, device, train_loader, xnor_gates_stat)
+    list_nparray = []
+    list_tensors = model.fc1.popc_acc
+    for tens in list_tensors:
+        list_nparray.append(tens.cpu().numpy())
+    np_list = np.array(list_nparray)
+    # np_list = (np_list/(10000*xnor_gates_stat*2)) + 0.5
+    np_list = (np_list.mean(axis=0)/(1000*xnor_gates_stat*2)) + 0.5
+    np_list1 = np_list.copy()
+    # print(np_list1.min())
+    # print("thresholds: ", model.fc1.thresholds.cpu().numpy())
+    for idx, threshold in enumerate(model.fc1.thresholds.cpu().numpy()):
+        np_list[idx] *= threshold
+        # for testing with original thresholds
+        # np_list[idx] = np.array([threshold for x in range(0,model.fc1.cycles)])
+    new_thresholds_tensor = torch.Tensor(np_list).cuda()/model.fc1.cycles
+    # print("thresholds_modified", new_thresholds_tensor*model.fc1.cycles)
+    # pass new thresholds to layer
+    model.fc1.thresholds_modified = new_thresholds_tensor
+    model.fc1.threshold_correction = 1
+    model.fc1.popc_acc_activate = 0
+    print("\n\nwith correction")
+    print("cycles: ", model.fc1.cycles)
+    execute_with_TLU_FashionCNN(model, device, test_loader, xnor_gates_stat)
+    '''
 
     #conv2
     #'''
