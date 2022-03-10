@@ -229,6 +229,7 @@ class QuantizedConv2d(nn.Conv2d):
         self.popc_acc_normal = []
         self.popc_acc_normal_activate = None
         self.cycles = 0
+        self.thresholds_modified = None
         super(QuantizedConv2d, self).__init__(*args, **kwargs)
 
     def forward(self, input):
@@ -289,7 +290,10 @@ class QuantizedConv2d(nn.Conv2d):
                 output_b = torch.zeros(output.shape[0], weight_b.shape[0], input_b.shape[2]).cuda()
 
                 # make the call to the cuda function
-                tluconv2d.customconv2d(input_b, weight_b, output_b, self.thresholds, popc_acc, self.nr_xnor_gates, self.nr_additional_samples, self.majv_shift, self.threshold_scaling, self.popc_acc_activate, self.threshold_correction)
+                if self.popc_acc_activate == 0 and self.threshold_correction == 1:
+                    tluconv2d.customconv2d(input_b, weight_b, output_b, self.thresholds, self.thresholds_modified, self.nr_xnor_gates, self.nr_additional_samples, self.majv_shift, self.threshold_scaling, self.popc_acc_activate, self.threshold_correction)
+                else:
+                    tluconv2d.customconv2d(input_b, weight_b, output_b, self.thresholds, popc_acc, self.nr_xnor_gates, self.nr_additional_samples, self.majv_shift, self.threshold_scaling, self.popc_acc_activate, self.threshold_correction)
 
                 # append accumulated popcounts
                 if self.popc_acc_activate == 1 and self.threshold_correction == 0:

@@ -108,7 +108,7 @@ __global__ void customconv2d_kernel(
         }
         if (threshold_correction == 1)
         {
-          comparison = (sub_popcnt >= (popc_acc[c][global_cycles]));
+          comparison = (sub_popcnt >= round(popc_acc[c][global_cycles]));
         }
         else
         {
