@@ -181,73 +181,146 @@ def main():
     # p2 = [2**x for x in range(2, 13)]
     # p2 = [3136]
     # threshold correction based on percentage
-    '''
+    #'''
     ### threshold correction based on Fabio's method
     # get average popcounts of each neuron
-    model.fc1.popc_acc_normal_activate = 1
-    execute_with_TLU_FashionCNN(model, device, test_loader)
-    list_nparray = []
-    list_tensors = model.fc1.popc_acc_normal
-    for tens in list_tensors:
-        list_nparray.append(tens.cpu().numpy())
-    np_list = np.array(list_nparray)
-    average_over_batches = np_list.mean(axis=0)
-    average_over_batches = average_over_batches.mean(axis=0)/model.fc1.cycles
-    # print("avg_over_b", average_over_batches.shape)
-    # get average popcount of each sliding window
-    model.fc1.popc_acc_normal_activate = 0
-    model.fc1.popc_acc_activate = 1
-    execute_with_TLU_FashionCNN(model, device, test_loader, activate=1)
-    list_nparray = []
-    list_tensors = model.fc1.popc_acc
-    for tens in list_tensors:
-        list_nparray.append(tens.cpu().numpy())
-    np_list = np.array(list_nparray)
-    np_list = np_list.mean(axis=0)/10000
-    # print("popc activations", np_list.shape)
-    for idx, threshold in enumerate(model.fc1.thresholds.cpu().numpy()):
-        error = average_over_batches[idx] - np_list[idx]
-        np_list[idx] = error
-    # print("np_list", np_list.shape)
-    print("with correction")
-    model.fc1.popc_acc = torch.Tensor(np_list).cuda()
-    model.fc1.threshold_correction = 1
-    model.fc1.popc_acc_activate = 0
-    execute_with_TLU_FashionCNN(model, device, test_loader, activate=1)
-    '''
-    # threshold correction based on my method
-    '''
-    model.fc1.threshold_correction = 0
-    model.fc1.popc_acc_activate = 1
-    execute_with_TLU_FashionCNN(model, device, test_loader, activate=1)
-    list_nparray = []
-    list_tensors = model.fc1.popc_acc
-    for tens in list_tensors:
-        list_nparray.append(tens.cpu().numpy())
-    np_list = np.array(list_nparray)
-    np_list = (np_list.sum(axis=0)/640000) + 0.5
-    for idx, threshold in enumerate(model.fc1.thresholds.cpu().numpy()):
-        np_list[idx] *= threshold
-    new_thresholds_tensor = torch.Tensor(np_list).cuda()/model.fc1.cycles
-    # pass new thresholds to layer
-    model.fc1.popc_acc = new_thresholds_tensor
-    model.fc1.threshold_correction = 1
-    model.fc1.popc_acc_activate = 0
-    print("\n\nwith correction")
-    execute_with_TLU_FashionCNN(model, device, test_loader, activate=0)
-    '''
+    # model.fc1.popc_acc_normal_activate = 1
+    # execute_with_TLU_FashionCNN(model, device, test_loader)
+    # list_nparray = []
+    # list_tensors = model.fc1.popc_acc_normal
+    # for tens in list_tensors:
+    #     list_nparray.append(tens.cpu().numpy())
+    # np_list = np.array(list_nparray)
+    # average_over_batches = np_list.mean(axis=0)
+    # average_over_batches = average_over_batches.mean(axis=0)/model.fc1.cycles
+    # # print("avg_over_b", average_over_batches.shape)
+    # # get average popcount of each sliding window
+    # model.fc1.popc_acc_normal_activate = 0
+    # model.fc1.popc_acc_activate = 1
+    # execute_with_TLU_FashionCNN(model, device, test_loader)
+    # list_nparray = []
+    # list_tensors = model.fc1.popc_acc
+    # for tens in list_tensors:
+    #     list_nparray.append(tens.cpu().numpy())
+    # np_list = np.array(list_nparray)
+    # np_list = (np_list.mean(axis=0)/1000) - 32
+    # np_list1 = average_over_batches.copy()
+    # # print("popc activations", np_list)
+    # for idx, threshold in enumerate(model.fc1.thresholds.cpu().numpy()):
+    #     error = average_over_batches[idx] - np_list[idx]
+    #     np_list[idx] = threshold + error
+    # # print("np_list", np_list.shape)
+    # print("with correction")
+    # model.fc1.popc_acc = torch.Tensor(np_list).cuda()
+    # model.fc1.threshold_correction = 1
+    # model.fc1.popc_acc_activate = 0
+    # execute_with_TLU_FashionCNN(model, device, test_loader)
+    #'''
 
-    # plot histogram of values
-    # mu, std = norm.fit(np_list.flatten())
-    # s = np.random.normal(mu, std, 10)
-    # plt.hist(np_list.flatten(), bins=50, density=True, alpha=0.6, color='g')
+    ### threshold correction based on Fabio's method (conv1)
+    # model.conv2.popc_acc_normal_activate = 1
+    # execute_with_TLU_FashionCNN(model, device, test_loader)
+    # list_nparray = []
+    # list_tensors = model.conv2.popc_acc_normal
+    # for tens in list_tensors:
+    #     list_nparray.append(tens.cpu().numpy())
+    # np_list = np.array(list_nparray)
+    # average_over_batches = np_list.mean(axis=0)
+    # average_over_batches = average_over_batches.mean(axis=0)/model.conv2.cycles
+    # # average_over_batches = average_over_batches.view([64, -1])
+    # average_over_batches = torch.Tensor(average_over_batches).cuda().view(64,-1).cpu().numpy()
+    # average_over_batches = average_over_batches.mean(axis=1)
+    # # print("avg_over_b", average_over_batches)
+    # # get average popcount of each sliding window
+    # model.conv2.popc_acc_normal_activate = 0
+    # model.conv2.popc_acc_activate = 1
+    # execute_with_TLU_FashionCNN(model, device, test_loader)
+    # list_nparray = []
+    # list_tensors = model.conv2.popc_acc
+    # for tens in list_tensors:
+    #     list_nparray.append(tens.cpu().numpy())
+    # np_list = np.array(list_nparray)
+    # # np_list = (np_list.mean(axis=0)/(1000*196*64))
+    # np_list = ((np_list.mean(axis=0)/(1000*196*64)) - 0.5)
+    # # np_list1 = average_over_batches.copy()
+    # # print("avg_over_b", average_over_batches)
+    # # print("np_list", np_list)
+    # # print("thresholds",model.conv2.thresholds.cpu().numpy())
+    # for idx, threshold in enumerate(model.conv2.thresholds.cpu().numpy()):
+    #     error = average_over_batches[idx] - np_list[idx]
+    #     # print("error", error.shape)
+    #     # np_list[idx] = threshold - error
+    #     np_list[idx] = np.array([threshold for x in range(0,18)])
+    # # print("np_list", np_list)
+    # np_list /= model.conv2.cycles
+    # print("with correction")
+    # model.conv2.popc_acc = torch.Tensor(np_list).cuda()
+    # model.conv2.threshold_correction = 1
+    # model.conv2.popc_acc_activate = 0
+    # execute_with_TLU_FashionCNN(model, device, test_loader)
+
+    # threshold correction based on my method
+    #'''
+    # model.fc1.threshold_correction = 0
+    # model.fc1.popc_acc_activate = 1
+    # execute_with_TLU_FashionCNN(model, device, test_loader)
+    # list_nparray = []
+    # list_tensors = model.fc1.popc_acc
+    # for tens in list_tensors:
+    #     list_nparray.append(tens.cpu().numpy())
+    # np_list = np.array(list_nparray)
+    # np_list = (np_list.mean(axis=0)/(1000*64))
+    # np_list1 = np_list.copy()
+    # # print(np_list1.min())
+    # for idx, threshold in enumerate(model.fc1.thresholds.cpu().numpy()):
+    #     # np_list[idx] *= threshold
+    #     np_list[idx] = np.array([threshold for x in range(0,model.fc1.cycles)])
+    # new_thresholds_tensor = torch.Tensor(np_list).cuda()/model.fc1.cycles
+    # # pass new thresholds to layer
+    # model.fc1.popc_acc = new_thresholds_tensor
+    # model.fc1.threshold_correction = 1
+    # model.fc1.popc_acc_activate = 0
+    # print("\n\nwith correction")
+    # execute_with_TLU_FashionCNN(model, device, test_loader)
+    #'''
+
+    #conv2
+    #'''
+    # model.conv2.threshold_correction = 0
+    # model.conv2.popc_acc_activate = 1
+    # execute_with_TLU_FashionCNN(model, device, test_loader)
+    # list_nparray = []
+    # list_tensors = model.conv2.popc_acc
+    # for tens in list_tensors:
+    #     list_nparray.append(tens.cpu().numpy())
+    # np_list = np.array(list_nparray)
+    # # print(np_list)
+    # np_list = (np_list.mean(axis=0))/(196*1000*64) + 0.5# div by nr xnor gates here
+    # np_list1 = np_list.copy()
+    # for idx, threshold in enumerate(model.conv2.thresholds.cpu().numpy()):
+    #     np_list[idx] *= threshold
+    # new_thresholds_tensor = torch.Tensor(np_list).cuda()/model.conv2.cycles
+    # # pass new thresholds to layer
+    # model.conv2.popc_acc = new_thresholds_tensor
+    # model.conv2.threshold_correction = 1
+    # model.conv2.popc_acc_activate = 0
+    # print("\n\nwith correction")
+    # execute_with_TLU_FashionCNN(model, device, test_loader)
+    # #'''
+    #
+
+
+    #plot histogram of values
+    # mu, std = norm.fit(np_list1.flatten())
+    # s = np.random.normal(mu, std, 100)
+    # plt.hist(np_list1.flatten(), bins=50, density=True, alpha=0.6, color='g')
     # xmin, xmax = plt.xlim()
     # x = np.linspace(xmin, xmax, 1000)
     # p = norm.pdf(x, mu, std)
     # plt.plot(x, p, 'k', linewidth=2)
     # title = "Fit results: mu = %.2f,  std = %.2f" % (mu, std)
     # plt.title(title)
-    # plt.savefig("distr_popc.pdf", format="pdf")
+    # plt.savefig("distr_popc_conv1.pdf", format="pdf")
 
     # Nr. of XNOR gates:  [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
 

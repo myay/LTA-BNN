@@ -237,6 +237,9 @@ class QuantizedConv2d(nn.Conv2d):
                 quantized_weight = apply_error_model(quantized_weight, self.error_model)
             output = F.conv2d(input, quantized_weight, self.bias, self.stride, self.padding, self.dilation, self.groups)
 
+            if self.popc_acc_normal_activate is not None:
+                self.popc_acc_normal.append(output)
+
             # TLU-computation
             if self.tlu_comp is not None:
                 # print("Executing with TLU: ", self.name)
@@ -257,11 +260,32 @@ class QuantizedConv2d(nn.Conv2d):
                 # unfold kernels
                 weight_b = quantized_weight.view(self.out_channels,-1).cuda()
 
+                # nr of neurons
+                wm_row = weight_b.shape[0]
+                # nr of weights
+                wm_col = weight_b.shape[1]
+                # nr of columns in image
+                im_col = input_b.shape[2]
+
+                # prepare tensor for storing accumulated popcount results
+                cycles = wm_col / self.nr_xnor_gates
+                if wm_col % self.nr_xnor_gates != 0:
+                    cycles += 1
+                cycles = int(cycles)
+                self.cycles = cycles
+                popc_acc = torch.zeros(wm_row, cycles).cuda()
+                # print("wm_col", wm_col)
+                # print(self.cycles)
+
                 # create output buffer
                 output_b = torch.zeros(output.shape[0], weight_b.shape[0], input_b.shape[2]).cuda()
 
                 # make the call to the cuda function
-                tluconv2d.customconv2d(input_b, weight_b, output_b, self.thresholds, self.nr_xnor_gates, self.nr_additional_samples, self.majv_shift, self.threshold_scaling)
+                tluconv2d.customconv2d(input_b, weight_b, output_b, self.thresholds, popc_acc, self.nr_xnor_gates, self.nr_additional_samples, self.majv_shift, self.threshold_scaling, self.popc_acc_activate, self.threshold_correction)
+
+                # append accumulated popcounts
+                if self.popc_acc_activate == 1 and self.threshold_correction == 0:
+                    self.popc_acc.append(popc_acc)
 
                 # create the view that PyTorch expects
                 output_b = output_b.view(output.shape[0], output.shape[1], output.shape[2], output.shape[3])

@@ -151,7 +151,7 @@ __global__ void customconv1d_kernel(
         if (threshold_correction == 1)
         {
           // comparison = (sub_popcnt >= (popc_acc[c][global_cycles]/cycles));
-          last_threshold_for_sample = round(((weight.size(1) % nr_xnor_gates) / nr_xnor_gates) * (popc_acc[c][global_cycles]/cycles));
+          last_threshold_for_sample = round(((weight.size(1) % nr_xnor_gates) / nr_xnor_gates) * (popc_acc[c][global_cycles]));
           comparison = (sub_popcnt >= last_threshold_for_sample);
         }
         else

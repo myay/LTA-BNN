@@ -51,12 +51,12 @@ def extract_and_set_thresholds(model):
                     idx += 1
                     # layer.tlu_comp = 1
 
-def execute_with_TLU_FashionCNN(model, device, test_loader, activate=0):
+def execute_with_TLU_FashionCNN(model, device, test_loader):
     # extract and set thresholds
     extract_and_set_thresholds(model)
 
     # activate TLU computation, set number of xnor gates, and nr of additional samples (0 by default) for each layer here
-    model.conv2.tlu_comp = 1 # set to 1 to activate
+    model.conv2.tlu_comp = None # set to 1 to activate
     # model.conv2.nr_xnor_gates = 64
     model.conv2.nr_additional_samples = 0
     model.conv2.majv_shift = 0
