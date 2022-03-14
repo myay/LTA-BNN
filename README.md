@@ -2,18 +2,18 @@
 A framework for evaluating the TLU-based execution of BNNs.
 
 Supported:
-- FashionMNIST CNN
+- FashionMNIST CNN (VGG-3), CIFAR10 CNN (VGG-7)
 - TLU computation for Linear and Conv2d layers
 - Variable number of xnor gates
 - Additional sampling windows (1-2 more)
 - Variable majority vote shift
 - Threshold scaling (factor 2 supported)
+- Threshold correction and custom threshold mechanisms
 - Training with TLU-based execution
 
 TODOs:
-- Local thresholds for each sub-popcount
 - Saving training state of BNN for retraining
-- Other BNN models, e.g. CIFAR10 and CIFAR100
+- Larger BNN models, e.g. CIFAR100
 
 #### CUDA-based Binarization, TLU-based execution, and Error Injection
 
@@ -23,9 +23,9 @@ Then, to install the CUDA-kernels, go to the folder ```code/cuda/``` and run
 
 ```./install_kernels.sh```
 
-After successful installation of all kernels, run
+After successful installation of all kernels, for training run
 
-```python3 run_fashion_binarized.py --model=BNN_FASHION_CNN --train-model=1 --batch-size=256 --epochs=1 --lr=0.001 --step-size=10 --gpu-num=0 --save-model="model_name.pt"``` for training.
+```python3 run_fashion_binarized.py --model=BNN_FASHION_CNN --train-model=1 --batch-size=256 --epochs=1 --lr=0.001 --step-size=10 --gpu-num=0 --save-model="model_name.pt"```.
 
 Then, for TLU-based inference, run
 
