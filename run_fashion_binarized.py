@@ -21,7 +21,7 @@ from Utils import set_layer_mode, parse_args, dump_exp_data, create_exp_folder, 
 
 from Traintest_Utils import train, test, Criterion, binary_hingeloss, Clippy
 
-from TLU_Utils import extract_and_set_thresholds, execute_with_TLU_FashionCNN, print_layer_data
+from TLU_Utils import extract_and_set_thresholds, execute_with_TLU_FashionCNN, print_layer_data, execute_with_TLU
 
 from QuantizedNN import QuantizedLinear, QuantizedConv2d, QuantizedActivation
 
@@ -175,10 +175,16 @@ def main():
         print("Loaded model: ", to_load)
         model.load_state_dict(torch.load(to_load, map_location='cuda:0'))
 
-    xnor_gates_stat = 32#1568
+    xnor_gates_list = [4*x for x in range(1, 65)] #[2**x for x in range(2, 13)]
     if args.tlu_mode is not None:
         # execute with TLU
-        execute_with_TLU_FashionCNN(model, device, test_loader, xnor_gates_stat)
+        execute_with_TLU_FashionCNN(model, device, test_loader, xnor_gates_list)
+
+    # sets TLU-mode for each layer
+    extract_and_set_thresholds(model)
+    print_layer_data(model)
+    execute_with_TLU(model, device, test_loader, xnor_gates_list)
+    # print_layer_data(model)
     # p2 = [2**x for x in range(2, 13)]
     # p2 = [3136]
     # threshold correction based on percentage

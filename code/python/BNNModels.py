@@ -116,51 +116,69 @@ class BNN_CIFAR10_CNN(nn.Module):
 
     def forward(self, x):
 
-        # block 1
+        # block 1 does not use TLU (integer inputs)
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.htanh(x)
         x = self.qact1(x)
 
         # block 2
-        x = self.conv2(x)
-        x = self.bn2(x)
-        x = self.htanh(x)
-        x = self.qact2(x)
+        if self.conv2.tlu_comp is not None:
+            x = self.conv2(x)
+        else:
+            x = self.conv2(x)
+            x = self.bn2(x)
+            x = self.htanh(x)
+            x = self.qact2(x)
         x = F.max_pool2d(x, 2)
 
         # block 3
-        x = self.conv3(x)
-        x = self.bn3(x)
-        x = self.htanh(x)
-        x = self.qact3(x)
+        if self.conv3.tlu_comp is not None:
+            x = self.conv3(x)
+        else:
+            x = self.conv3(x)
+            x = self.bn3(x)
+            x = self.htanh(x)
+            x = self.qact3(x)
 
         # block 4
-        x = self.conv4(x)
-        x = self.bn4(x)
-        x = self.htanh(x)
-        x = self.qact4(x)
+        if self.conv4.tlu_comp is not None:
+            x = self.conv4(x)
+        else:
+            x = self.conv4(x)
+            x = self.bn4(x)
+            x = self.htanh(x)
+            x = self.qact4(x)
         x = F.max_pool2d(x, 2)
 
         # block 5
-        x = self.conv5(x)
-        x = self.bn5(x)
-        x = self.htanh(x)
-        x = self.qact5(x)
+        if self.conv5.tlu_comp is not None:
+            x = self.conv5(x)
+        else:
+            x = self.conv5(x)
+            x = self.bn5(x)
+            x = self.htanh(x)
+            x = self.qact5(x)
 
         # block 6
-        x = self.conv6(x)
-        x = self.bn6(x)
-        x = self.htanh(x)
-        x = self.qact6(x)
+        if self.conv6.tlu_comp is not None:
+            x = self.conv6(x)
+        else:
+            x = self.conv6(x)
+            x = self.bn6(x)
+            x = self.htanh(x)
+            x = self.qact6(x)
         x = F.max_pool2d(x, 2)
 
         # block 7
         x = torch.flatten(x, 1)
-        x = self.fc1(x)
-        x = self.bn7(x)
-        x = self.htanh(x)
-        x = self.qact3(x)
+        if self.fc1.tlu_comp is not None:
+            x = self.fc1(x)
+        else:
+            x = self.fc1(x)
+            x = self.bn7(x)
+            x = self.htanh(x)
+            x = self.qact3(x)
 
         x = self.fc2(x)
         x = self.scale(x)
