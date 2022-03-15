@@ -11,6 +11,7 @@ import time
 import json
 import sys
 import os
+import scipy
 from datetime import datetime
 sys.path.append("code/python/")
 
@@ -25,7 +26,7 @@ from TLU_Utils import extract_and_set_thresholds, execute_with_TLU_FashionCNN, p
 
 from QuantizedNN import QuantizedLinear, QuantizedConv2d, QuantizedActivation
 
-from BNNModels import BNN_FASHION_CNN, BNN_CIFAR10_CNN
+from BNNModels import BNN_FASHION_CNN, BNN_CIFAR10_CNN, BNN_SVHN_CNN
 
 # training
 # python3 run_fashion_binarized.py --model=BNN_FASHION_CNN --train-model=1 --batch-size=256 --epochs=1 --lr=0.001 --step-size=10 --gpu-num=0 --save-model="model_name.pt"
@@ -76,6 +77,9 @@ def main():
     if args.model == "BNN_CIFAR10_CNN":
         nn_model = BNN_CIFAR10_CNN
         model = nn_model().cuda()
+    if args.model == "BNN_SVHN_CNN":
+        nn_model = BNN_SVHN_CNN
+        model = nn_model().cuda()
     if args.model == "BNN_CIFAR100_CNN":
         nn_model = vgg.__dict__[args.vgg_case]()
         nn_model.features = torch.nn.DataParallel(nn_model.features)
@@ -94,6 +98,13 @@ def main():
             ])
         dataset1 = datasets.FashionMNIST('data', train=True, download=True, transform=transform)
         dataset2 = datasets.FashionMNIST('data', train=False, transform=transform)
+
+    if model.name == "BNN_SVHN_CNN":
+        transform=transforms.Compose([
+            transforms.ToTensor(),
+            ])
+        dataset1 = datasets.SVHN(root="data/SVHN/", split="train", download=True, transform=transform)
+        dataset2 = datasets.SVHN(root="data/SVHN/", split="test", download=True, transform=transform)
 
     if model.name == "BNN_CIFAR10_CNN":
         transform_train=transforms.Compose([
@@ -175,15 +186,15 @@ def main():
         print("Loaded model: ", to_load)
         model.load_state_dict(torch.load(to_load, map_location='cuda:0'))
 
-    xnor_gates_list = [4*x for x in range(1, 65)] #[2**x for x in range(2, 13)]
+    xnor_gates_list = [32]#[4*x for x in range(1, 65)] #[2**x for x in range(2, 13)]
     if args.tlu_mode is not None:
         # execute with TLU
         execute_with_TLU_FashionCNN(model, device, test_loader, xnor_gates_list)
 
     # sets TLU-mode for each layer
-    extract_and_set_thresholds(model)
-    print_layer_data(model)
-    execute_with_TLU(model, device, test_loader, xnor_gates_list)
+    # extract_and_set_thresholds(model)
+    # print_layer_data(model)
+    # execute_with_TLU(model, device, test_loader, xnor_gates_list)
     # print_layer_data(model)
     # p2 = [2**x for x in range(2, 13)]
     # p2 = [3136]
