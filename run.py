@@ -150,6 +150,11 @@ def main():
 
         model = nn_model().to(device)
 
+        # set xnor gates for all layers
+        for layer in model.children():
+            if isinstance(layer, (nn.Conv2d, nn.Linear)):
+                layer.nr_xnor_gates = current_xc
+
         # create experiment folder and file
         to_dump_path = create_exp_folder(model)
         if not os.path.exists(to_dump_path):
