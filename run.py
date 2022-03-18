@@ -37,7 +37,7 @@ from BNNModels import BNN_VGG3, BNN_VGG7
 # inference
 # python3 run_fashion_binarized.py --model=BNN_FASHION_CNN --load-model-path="model_name.pt" --tlu-mode=1 --test-batch-size=1000 --gpu-num=0
 
-nr_xnor_const = [4,8,12,16,24,32,48,64,96,128,192,256]
+# nr_xnor_const = [4,8,16,32,64,128,256] #[4,8,12,16,24,32,48,64,96,128,192,256]
 # nr_xnor_const = [4,8]
 current_xc = 4
 
@@ -138,7 +138,7 @@ def main():
     train_loader = torch.utils.data.DataLoader(dataset1,**train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
-    cases_tlu_train = [4,8,12,16,24,32,48,64,96,128,192,256]
+    cases_tlu_train = [4,8,16,32,64,128,256] #[4,8,12,16,24,32,48,64,96,128,192,256]
     if args.tlu_train is not None:
         model.tlu_train = 1
     else:
@@ -198,7 +198,7 @@ def main():
             print("Loaded model: ", to_load)
             model.load_state_dict(torch.load(to_load, map_location='cuda:0'))
 
-        xnor_gates_list = [4,8,12,16,24,32,48,64,96,128,192,256] #[4*x for x in range(1, 65)] #[2**x for x in range(2, 13)]
+        xnor_gates_list = [4,8,16,32,64,128,256] #[4*x for x in range(1, 65)] #[2**x for x in range(2, 13)]
         # test(model, device, test_loader)
         if args.tlu_mode is not None:
             # execute with TLU

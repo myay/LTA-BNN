@@ -102,6 +102,7 @@ class BNN_VGG7(nn.Module):
         super(BNN_VGG7, self).__init__()
         self.htanh = nn.Hardtanh()
         self.name = "BNN_VGG7"
+        self.tlu_train = None
 
         # block 1
         self.conv1 = QuantizedConv2d(3, 128, kernel_size=3, padding=1, padding_mode = 'replicate', stride=1, quantization=binarizepm1, layerNr=1, bias=False)
@@ -149,63 +150,135 @@ class BNN_VGG7(nn.Module):
         x = self.htanh(x)
         x = self.qact1(x)
 
-        # block 2
-        if self.conv2.tlu_comp is not None:
-            x = self.conv2(x)
-        else:
+        if self.tlu_train is not None:
+            # block 2
+            xt1 = x
+            self.conv2.tlu_comp = None
+            xt1 = x.clone().detach()
             x = self.conv2(x)
             x = self.bn2(x)
             x = self.htanh(x)
             x = self.qact2(x)
-        x = F.max_pool2d(x, 2)
+            self.conv2.tlu_comp = 1 # for training with errors
+            x.data.copy_(self.conv2(xt1).data)
+            x = F.max_pool2d(x, 2)
 
-        # block 3
-        if self.conv3.tlu_comp is not None:
-            x = self.conv3(x)
-        else:
+            # block 3
+            xt2 = x
+            self.conv3.tlu_comp = None
+            xt2 = x.clone().detach()
             x = self.conv3(x)
             x = self.bn3(x)
             x = self.htanh(x)
             x = self.qact3(x)
+            self.conv3.tlu_comp = 1 # for training with errors
+            x.data.copy_(self.conv3(xt2).data)
 
-        # block 4
-        if self.conv4.tlu_comp is not None:
-            x = self.conv4(x)
-        else:
+            # block 4
+            xt3 = x
+            self.conv4.tlu_comp = None
+            xt3 = x.clone().detach()
             x = self.conv4(x)
             x = self.bn4(x)
             x = self.htanh(x)
             x = self.qact4(x)
-        x = F.max_pool2d(x, 2)
+            self.conv4.tlu_comp = 1 # for training with errors
+            x.data.copy_(self.conv4(xt3).data)
+            x = F.max_pool2d(x, 2)
 
-        # block 5
-        if self.conv5.tlu_comp is not None:
-            x = self.conv5(x)
-        else:
+            # block 5
+            xt4 = x
+            self.conv5.tlu_comp = None
+            xt4 = x.clone().detach()
             x = self.conv5(x)
             x = self.bn5(x)
             x = self.htanh(x)
             x = self.qact5(x)
+            self.conv5.tlu_comp = 1 # for training with errors
+            x.data.copy_(self.conv5(xt4).data)
 
-        # block 6
-        if self.conv6.tlu_comp is not None:
-            x = self.conv6(x)
-        else:
+            # block 6
+            xt5 = x
+            self.conv6.tlu_comp = None
+            xt5 = x.clone().detach()
             x = self.conv6(x)
             x = self.bn6(x)
             x = self.htanh(x)
             x = self.qact6(x)
-        x = F.max_pool2d(x, 2)
+            self.conv6.tlu_comp = 1 # for training with errors
+            x.data.copy_(self.conv6(xt5).data)
+            x = F.max_pool2d(x, 2)
 
-        # block 7
-        x = torch.flatten(x, 1)
-        if self.fc1.tlu_comp is not None:
-            x = self.fc1(x)
-        else:
+            # block 7
+            x = torch.flatten(x, 1)
+            xt6 = x
+            self.fc1.tlu_comp = None
+            xt6 = x.clone().detach()
             x = self.fc1(x)
             x = self.bn7(x)
             x = self.htanh(x)
             x = self.qact7(x)
+            # TLU-based execution
+            self.fc1.tlu_comp = 1
+            x.data.copy_(self.fc1(xt6).data)
+        else:
+            # block 2
+            if self.conv2.tlu_comp is not None:
+                x = self.conv2(x)
+            else:
+                x = self.conv2(x)
+                x = self.bn2(x)
+                x = self.htanh(x)
+                x = self.qact2(x)
+            x = F.max_pool2d(x, 2)
+
+            # block 3
+            if self.conv3.tlu_comp is not None:
+                x = self.conv3(x)
+            else:
+                x = self.conv3(x)
+                x = self.bn3(x)
+                x = self.htanh(x)
+                x = self.qact3(x)
+
+            # block 4
+            if self.conv4.tlu_comp is not None:
+                x = self.conv4(x)
+            else:
+                x = self.conv4(x)
+                x = self.bn4(x)
+                x = self.htanh(x)
+                x = self.qact4(x)
+            x = F.max_pool2d(x, 2)
+
+            # block 5
+            if self.conv5.tlu_comp is not None:
+                x = self.conv5(x)
+            else:
+                x = self.conv5(x)
+                x = self.bn5(x)
+                x = self.htanh(x)
+                x = self.qact5(x)
+
+            # block 6
+            if self.conv6.tlu_comp is not None:
+                x = self.conv6(x)
+            else:
+                x = self.conv6(x)
+                x = self.bn6(x)
+                x = self.htanh(x)
+                x = self.qact6(x)
+            x = F.max_pool2d(x, 2)
+
+            # block 7
+            x = torch.flatten(x, 1)
+            if self.fc1.tlu_comp is not None:
+                x = self.fc1(x)
+            else:
+                x = self.fc1(x)
+                x = self.bn7(x)
+                x = self.htanh(x)
+                x = self.qact7(x)
 
         x = self.fc2(x)
         x = self.scale(x)
