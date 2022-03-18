@@ -22,7 +22,8 @@ def parse_args(parser):
                     help='MNIST/FMNIST/QMNIST/SVHN/CIFAR10')
     parser.add_argument('--train-model', type=int, default=None, help='Whether to train a model')
     parser.add_argument('--load-model-path', type=str, default=None, help='Specify path to model if it should be loaded')
-    parser.add_argument('--tlu-mode', type=int, default=None, help='Whether TLU-based inference should be used')
+    parser.add_argument('--tlu-mode', type=int, default=None, help='Whether to use TLU-based inference')
+    parser.add_argument('--tlu-train', type=int, default=None, help='Whether TLU-based inference should be used in training')
     parser.add_argument('--gpu-num', type=int, default=0, metavar='N', help='Specify the GPU on which the training should be performed')
     parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                         help='input batch size for training (default: 64)')

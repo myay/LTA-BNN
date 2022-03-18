@@ -2,7 +2,7 @@
 A framework for evaluating the TLU-based execution of BNNs.
 
 Supported:
-- FashionMNIST CNN (VGG-3), CIFAR10 CNN (VGG-7)
+- FashionMNIST, KMNIST, SVHN, CIFAR10
 - TLU computation for Linear and Conv2d layers
 - Variable number of xnor gates
 - Additional sampling windows (1-2 more)

@@ -18,7 +18,7 @@ class BNN_VGG3(nn.Module):
         super(BNN_VGG3, self).__init__()
         self.htanh = nn.Hardtanh()
         self.name = "BNN_VGG3"
-        self.tlu_mode = None
+        self.tlu_train = None
 
         self.conv1 = QuantizedConv2d(1, 64, kernel_size=3, padding=1, padding_mode = 'replicate', stride=1, quantization=binarizepm1, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
@@ -45,25 +45,52 @@ class BNN_VGG3(nn.Module):
         x = self.qact1(x)
         x = F.max_pool2d(x, 2)
 
-        # conv2d block 2
-        if self.conv2.tlu_comp is not None:
-            x = self.conv2(x)
-        else:
+        if self.tlu_train is not None:
+            # conv2d block 2
+            xt1 = x
+            self.conv2.tlu_comp = None
+            xt1 = x.clone().detach()
             x = self.conv2(x)
             x = self.bn2(x)
             x = self.htanh(x)
             x = self.qact2(x)
-        x = F.max_pool2d(x, 2)
+            # TLU-based execution
+            self.conv2.tlu_comp = 1 # for training with errors
+            x.data.copy_(self.conv2(xt1).data)
+            x = F.max_pool2d(x, 2)
 
-        # fc block 1
-        x = torch.flatten(x, 1)
-        if self.fc1.tlu_comp is not None:
-            x = self.fc1(x)
-        else:
+            # fc block 1
+            x = torch.flatten(x, 1)
+            xt2 = x
+            self.fc1.tlu_comp = None
+            xt2 = x.clone().detach()
             x = self.fc1(x)
             x = self.bn3(x)
             x = self.htanh(x)
             x = self.qact3(x)
+            # TLU-based execution
+            self.fc1.tlu_comp = 1
+            x.data.copy_(self.fc1(xt2).data)
+        else:
+            # conv2d block 2
+            if self.conv2.tlu_comp is not None:
+                x = self.conv2(x)
+            else:
+                x = self.conv2(x)
+                x = self.bn2(x)
+                x = self.htanh(x)
+                x = self.qact2(x)
+            x = F.max_pool2d(x, 2)
+
+            # fc block 1
+            x = torch.flatten(x, 1)
+            if self.fc1.tlu_comp is not None:
+                x = self.fc1(x)
+            else:
+                x = self.fc1(x)
+                x = self.bn3(x)
+                x = self.htanh(x)
+                x = self.qact3(x)
 
         # fc block 2 does not use TLU (no binarization)
         x = self.fc2(x)
