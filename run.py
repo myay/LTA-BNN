@@ -26,7 +26,7 @@ from TLU_Utils import extract_and_set_thresholds, execute_with_TLU_FashionCNN, p
 
 from QuantizedNN import QuantizedLinear, QuantizedConv2d, QuantizedActivation
 
-from BNNModels import BNN_FASHION_CNN, BNN_CIFAR10_CNN, BNN_SVHN_CNN
+from BNNModels import BNN_VGG3, BNN_VGG7
 
 # training
 # python3 run_fashion_binarized.py --model=BNN_FASHION_CNN --train-model=1 --batch-size=256 --epochs=1 --lr=0.001 --step-size=10 --gpu-num=0 --save-model="model_name.pt"
@@ -68,45 +68,35 @@ def main():
     model = None
     dataset1 = None
     dataset2 = None
-    if args.model == "BNN_FASHION_CNN":
-        nn_model = BNN_FASHION_CNN
+    if args.model == "VGG3":
+        nn_model = BNN_VGG3
         model = nn_model().cuda()
-    if args.model == "BNN_FASHION_FC":
-        nn_model = BNN_FASHION_FC
+    if args.model == "VGG7":
+        nn_model = BNN_VGG7
         model = nn_model().cuda()
-    if args.model == "BNN_CIFAR10_CNN":
-        nn_model = BNN_CIFAR10_CNN
-        model = nn_model().cuda()
-    if args.model == "BNN_SVHN_CNN":
-        nn_model = BNN_SVHN_CNN
-        model = nn_model().cuda()
-    if args.model == "BNN_CIFAR100_CNN":
-        nn_model = vgg.__dict__[args.vgg_case]()
-        nn_model.features = torch.nn.DataParallel(nn_model.features)
-        model = nn_model.cuda()
 
-    if model.name == "BNN_MNIST":
+    if args.dataset == "MNIST":
         transform=transforms.Compose([
             transforms.ToTensor(),
             ])
         dataset1 = datasets.MNIST('data', train=True, download=True, transform=transform)
         dataset2 = datasets.MNIST('data', train=False, transform=transform)
 
-    if model.name == "BNN_FASHION_CNN" or model.name == "BNN_FASHION_FC":
+    if args.dataset == "FMNIST":
         transform=transforms.Compose([
             transforms.ToTensor(),
             ])
         dataset1 = datasets.FashionMNIST('data', train=True, download=True, transform=transform)
         dataset2 = datasets.FashionMNIST('data', train=False, transform=transform)
 
-    if model.name == "BNN_SVHN_CNN":
+    if args.dataset == "SVHN":
         transform=transforms.Compose([
             transforms.ToTensor(),
             ])
         dataset1 = datasets.SVHN(root="data/SVHN/", split="train", download=True, transform=transform)
         dataset2 = datasets.SVHN(root="data/SVHN/", split="test", download=True, transform=transform)
 
-    if model.name == "BNN_CIFAR10_CNN":
+    if args.dataset == "CIFAR10":
         transform_train=transforms.Compose([
             transforms.RandomCrop(32, padding=4),
             transforms.RandomHorizontalFlip(),
@@ -120,7 +110,7 @@ def main():
         dataset1 = datasets.CIFAR10('data', train=True, download=True, transform=transform_train)
         dataset2 = datasets.CIFAR10('data', train=False, transform=transform_test)
 
-    if model.name == "BNN_CIFAR100_CNN":
+    if args.dataset == "CIFAR100":
         transform_train=transforms.Compose([
             transforms.RandomCrop(32, padding=4),
             transforms.RandomHorizontalFlip(),
@@ -187,9 +177,11 @@ def main():
         model.load_state_dict(torch.load(to_load, map_location='cuda:0'))
 
     xnor_gates_list = [32]#[4*x for x in range(1, 65)] #[2**x for x in range(2, 13)]
+    # test(model, device, test_loader)
     if args.tlu_mode is not None:
         # execute with TLU
-        execute_with_TLU_FashionCNN(model, device, test_loader, xnor_gates_list)
+        # execute_with_TLU_FashionCNN(model, device, test_loader, xnor_gates_list)
+        execute_with_TLU(model, device, test_loader, xnor_gates_list)
 
     # sets TLU-mode for each layer
     # extract_and_set_thresholds(model)

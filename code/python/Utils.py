@@ -17,7 +17,9 @@ def set_layer_mode(model, mode):
 
 def parse_args(parser):
     parser.add_argument('--model', type=str, default=None,
-                    help='BNN_FASHION_CNN/BNN_CIFAR10_CNN/BNN_CIFAR100_CNN')
+                    help='VGG3/VGG7')
+    parser.add_argument('--dataset', type=str, default=None,
+                    help='MNIST/FMNIST/QMNIST/SVHN/CIFAR10')
     parser.add_argument('--train-model', type=int, default=None, help='Whether to train a model')
     parser.add_argument('--load-model-path', type=str, default=None, help='Specify path to model if it should be loaded')
     parser.add_argument('--tlu-mode', type=int, default=None, help='Whether TLU-based inference should be used')
@@ -50,7 +52,7 @@ def parse_args(parser):
 
 def dump_exp_data(model, args, all_accuracies):
     to_dump = dict()
-    to_dump["model"] = model.name
+    # to_dump["model"] = model.name
     to_dump["batchsize"] = args.batch_size
     to_dump["epochs"] = args.epochs
     to_dump["learning_rate"] = args.lr
