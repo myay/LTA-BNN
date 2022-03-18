@@ -89,6 +89,13 @@ def main():
         dataset1 = datasets.FashionMNIST('data', train=True, download=True, transform=transform)
         dataset2 = datasets.FashionMNIST('data', train=False, transform=transform)
 
+    if args.dataset == "KMNIST":
+        transform=transforms.Compose([
+            transforms.ToTensor(),
+            ])
+        dataset1 = datasets.KMNIST(root="data/KMNIST/", train=True, download=True, transform=transform)
+        dataset2 = datasets.KMNIST('data/KMNIST/', train=False, download=True, transform=transform)
+
     if args.dataset == "SVHN":
         transform=transforms.Compose([
             transforms.ToTensor(),
@@ -176,7 +183,7 @@ def main():
         print("Loaded model: ", to_load)
         model.load_state_dict(torch.load(to_load, map_location='cuda:0'))
 
-    xnor_gates_list = [32]#[4*x for x in range(1, 65)] #[2**x for x in range(2, 13)]
+    xnor_gates_list = [4*x for x in range(1, 65)] #[2**x for x in range(2, 13)]
     # test(model, device, test_loader)
     if args.tlu_mode is not None:
         # execute with TLU

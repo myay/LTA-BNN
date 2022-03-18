@@ -25,10 +25,10 @@ Then, to install the CUDA-kernels, go to the folder ```code/cuda/``` and run
 
 After successful installation of all kernels, for training run
 
-```python3 run_fashion_binarized.py --model=VGG3 --dataset=FMNIST --train-model=1 --batch-size=256 --epochs=100 --lr=0.001 --step-size=10 --gpu-num=0 --save-model="model_name.pt"```.
+```python3 run.py --model=VGG3 --dataset=FMNIST --train-model=1 --batch-size=256 --epochs=100 --lr=0.001 --step-size=10 --gpu-num=0 --save-model="model_name.pt"```.
 
 Then, for TLU-based inference, run
 
-```python3 run_fashion_binarized.py --model=VGG3 --dataset=FMNIST --load-model-path="model_name.pt" --tlu-mode=1 --test-batch-size=1000 --gpu-num=0```.
+```python3 run.py --model=VGG3 --dataset=FMNIST --load-model-path="model_name.pt" --tlu-mode=1 --test-batch-size=1000 --gpu-num=0```.
 
 Please contact me if you have any questions: mikail.yayla@tu-dortmund.de.
