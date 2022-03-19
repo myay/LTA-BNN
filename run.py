@@ -28,6 +28,8 @@ from QuantizedNN import QuantizedLinear, QuantizedConv2d, QuantizedActivation
 
 from BNNModels import BNN_VGG3, BNN_VGG7
 
+#tmux new-session -d -s kmnist-tlu  'python3 run.py --model=VGG3 --dataset=KMNIST --train-model=1 --tlu-train=1 --tlu-mode=1 --batch-size=256 --epochs=100 --lr=0.001 --step-size=10 --gpu-num=0 --save-model="KMNIST_TLU_TRAIN" >> exp-res-kmnist-tlutrain_corrected.txt'
+
 # training
 # python3 run_fashion_binarized.py --model=BNN_FASHION_CNN --train-model=1 --batch-size=256 --epochs=1 --lr=0.001 --step-size=10 --gpu-num=0 --save-model="model_name.pt"
 
@@ -138,7 +140,7 @@ def main():
     train_loader = torch.utils.data.DataLoader(dataset1,**train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
-    cases_tlu_train = [4,8,16,32,64,128,256] #[4,8,12,16,24,32,48,64,96,128,192,256]
+    cases_tlu_train = [32]#[4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256] #[4,8,12,16,24,32,48,64,96,128,192,256]
     if args.tlu_train is not None:
         model.tlu_train = 1
     else:
@@ -146,13 +148,13 @@ def main():
 
     for xnor_gates_n in cases_tlu_train:
         current_xc = xnor_gates_n
-        print("--- XNOR GATES: ", current_xc)
+        print("\n--- XNOR GATES: ", current_xc)
 
         model = nn_model().to(device)
 
         # set xnor gates for all layers
         for layer in model.children():
-            if isinstance(layer, (nn.Conv2d, nn.Linear)):
+            if isinstance(layer, (QuantizedConv2d, QuantizedLinear)):
                 layer.nr_xnor_gates = current_xc
 
         # create experiment folder and file
@@ -181,6 +183,10 @@ def main():
                 since = int(round(time.time()*1000))
                 #
                 # test(model, device, test_loader)
+                # if args.tlu_mode is not None:
+                #     # execute with TLU
+                #     # execute_with_TLU_FashionCNN(model, device, test_loader, xnor_gates_list)
+                #     execute_with_TLU(model, device, test_loader, [current_xc])
                 #
                 time_elapsed += int(round(time.time()*1000)) - since
                 # print('Test time elapsed: {}ms'.format(int(round(time.time()*1000)) - since))
@@ -203,7 +209,7 @@ def main():
             print("Loaded model: ", to_load)
             model.load_state_dict(torch.load(to_load, map_location='cuda:0'))
 
-        xnor_gates_list = [4,8,16,32,64,128,256] #[4*x for x in range(1, 65)] #[2**x for x in range(2, 13)]
+        xnor_gates_list = [32]#[4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256] #[4*x for x in range(1, 65)] #[2**x for x in range(2, 13)]
         # test(model, device, test_loader)
         if args.tlu_mode is not None:
             # execute with TLU

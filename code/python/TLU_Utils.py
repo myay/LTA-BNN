@@ -43,7 +43,7 @@ def extract_and_set_thresholds(model):
 
     idx = 0
     for layer in model.children():
-        if isinstance(layer, (nn.Conv2d, nn.Linear)):
+        if isinstance(layer, (QuantizedConv2d, QuantizedLinear)):
             if (idx == 0) or (idx == len(thresholds_nofirst)+1):
                 layer.first_or_last_layer = 1
             idx += 1
@@ -52,7 +52,7 @@ def extract_and_set_thresholds(model):
     idx = 0
     for layer in model.children():
         with torch.no_grad():
-            if isinstance(layer, (nn.Conv2d, nn.Linear)):
+            if isinstance(layer, (QuantizedConv2d, QuantizedLinear)):
                 if layer.first_or_last_layer is None:
                     layer.thresholds = thresholds_nofirst[idx]
                     idx += 1

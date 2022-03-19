@@ -47,9 +47,8 @@ def parse_args(parser):
                         help='how many batches to wait before logging training status')
     parser.add_argument('--save-model', type=str, default=None,
                         help='Specify name for saving model')
-    parser.add_argument('--test-error', action='store_true', default=False,
-                        help='Test accuracy under errors')
-
+    parser.add_argument('--test-error', action='store_true', default=False, help='Test accuracy under errors')
+    parser.add_argument('--silent', type=int, default=None, help='Whether to print training data')
 
 def dump_exp_data(model, args, all_accuracies):
     to_dump = dict()
