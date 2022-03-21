@@ -109,10 +109,7 @@ class QuantizedLinear(nn.Linear):
             if self.error_model is not None:
                 quantized_weight = apply_error_model(quantized_weight, self.error_model)
 
-            output = F.linear(input, quantized_weight)
-
-            if self.popc_acc_normal_activate is not None:
-                self.popc_acc_normal.append(output)
+            output = None
 
             # TLU-computation
             if self.tlu_comp is not None:
@@ -150,7 +147,7 @@ class QuantizedLinear(nn.Linear):
                 # if self.popc_acc_activate == 1 and self.threshold_correction == 0:
                 #     self.popc_acc = popc_acc
 
-                output_b = torch.zeros_like(output)
+                output_b = torch.zeros(im_col, wm_row).cuda()
 
                 if self.popc_acc_activate == 0 and self.threshold_correction == 1:
                     tluconv1d.customconv1d(input_b, weight_b, output_b, self.thresholds, self.thresholds_modified, self.nr_xnor_gates, self.nr_additional_samples, self.majv_shift, self.threshold_scaling, self.popc_acc_activate, self.threshold_correction)
@@ -189,6 +186,10 @@ class QuantizedLinear(nn.Linear):
                 #                 sub_popcnt = 0
                 #         result.append(result_sub)
                 # np_result = np.array(result)
+            else:
+                output = F.linear(input, quantized_weight)
+                if self.popc_acc_normal_activate is not None:
+                    self.popc_acc_normal.append(output)
             return output
         else:
             quantized_weight = None
@@ -244,10 +245,13 @@ class QuantizedConv2d(nn.Conv2d):
                 quantized_bias = self.bias
             if self.error_model is not None:
                 quantized_weight = apply_error_model(quantized_weight, self.error_model)
-            output = F.conv2d(input, quantized_weight, self.bias, self.stride, self.padding, self.dilation, self.groups)
 
-            if self.popc_acc_normal_activate is not None:
-                self.popc_acc_normal.append(output)
+            output = None
+            # output = F.conv2d(input, quantized_weight, self.bias, self.stride, self.padding, self.dilation, self.groups)
+            # print("output_shape", output.shape)
+            # 1 batch size
+            # 2 nr neurons
+            # 3
 
             # TLU-computation
             if self.tlu_comp is not None:
@@ -276,6 +280,9 @@ class QuantizedConv2d(nn.Conv2d):
                 # nr of columns in image
                 im_col = input_b.shape[2]
 
+                # print("bs: ", input_b.shape[0])
+                # print("neurons: ", wm_row)
+                # print("filter size", h)
                 # prepare tensor for storing accumulated popcount results
                 cycles = wm_col / self.nr_xnor_gates
                 if wm_col % self.nr_xnor_gates != 0:
@@ -287,7 +294,7 @@ class QuantizedConv2d(nn.Conv2d):
                 # print(self.cycles)
 
                 # create output buffer
-                output_b = torch.zeros(output.shape[0], weight_b.shape[0], input_b.shape[2]).cuda()
+                output_b = torch.zeros(input_b.shape[0], weight_b.shape[0], input_b.shape[2]).cuda()
 
                 # make the call to the cuda function
                 if self.popc_acc_activate == 0 and self.threshold_correction == 1:
@@ -300,10 +307,15 @@ class QuantizedConv2d(nn.Conv2d):
                     self.popc_acc.append(popc_acc)
 
                 # create the view that PyTorch expects
-                output_b = output_b.view(output.shape[0], output.shape[1], output.shape[2], output.shape[3])
+                output_b = output_b.view(input_b.shape[0], wm_row, h, w)
 
                 output = output_b
 
+            else:
+                output = F.conv2d(input, quantized_weight, self.bias, self.stride, self.padding, self.dilation, self.groups)
+
+                if self.popc_acc_normal_activate is not None:
+                    self.popc_acc_normal.append(output)
             return output
         else:
             quantized_weight = None
