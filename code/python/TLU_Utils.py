@@ -68,11 +68,12 @@ def execute_with_TLU(model, device, test_loader, xnor_gates_list):
 
     # print("\n")
     for majv_shift in majv_shifts:
-        print("\n --- MAJV-SHIFT --- \n", majv_shift)
+        # print("\n --- MAJV-SHIFT --- \n", majv_shift)
         for additional_sample in additional_samples:
             all_accuracies = []
             for nr_xnor in xnor_gates:
                 # set nr of xnor gates of each layer
+                print("\n --- xnor gates --- \n", nr_xnor)
                 for layer in model.children():
                     if isinstance(layer, (nn.Conv2d, nn.Linear)):
                         layer.nr_xnor_gates = nr_xnor

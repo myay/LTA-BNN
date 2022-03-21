@@ -29,7 +29,7 @@ After successful installation of all kernels, for training run
 
 Then, for TLU-based inference, run
 
-```python3 run.py --model=VGG3 --dataset=FMNIST --load-model=1 path="model_name.pt" --tlu-mode=1 --test-batch-size=1000 --gpu-num=0```.
+```python3 run.py --model=VGG3 --dataset=FMNIST --load-model-path="model_name.pt" --tlu-mode=1 --test-batch-size=1000 --gpu-num=0```.
 
 For training based on TLU-execution, run
 
