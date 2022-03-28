@@ -140,7 +140,7 @@ def main():
     train_loader = torch.utils.data.DataLoader(dataset1,**train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
-    cases_tlu_train = [32]#[4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256] #[4,8,12,16,24,32,48,64,96,128,192,256]
+    cases_tlu_train = [16]#[4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256] #[4,8,12,16,24,32,48,64,96,128,192,256]
     if args.tlu_train is not None:
         model.tlu_train = 1
     else:
@@ -151,7 +151,7 @@ def main():
         print("\n--- XNOR GATES: ", current_xc)
 
         model = nn_model().to(device)
-
+        # print(model.fc1.weight.shape)
         # set xnor gates for all layers
         for layer in model.children():
             if isinstance(layer, (QuantizedConv2d, QuantizedLinear)):
@@ -183,10 +183,10 @@ def main():
                 since = int(round(time.time()*1000))
                 #
                 test(model, device, test_loader)
-                if args.tlu_mode is not None:
-                #     # execute with TLU
-                #     # execute_with_TLU_FashionCNN(model, device, test_loader, xnor_gates_list)
-                    execute_with_TLU(model, device, test_loader, [current_xc])
+                # if args.tlu_mode is not None:
+                # #     # execute with TLU
+                # #     # execute_with_TLU_FashionCNN(model, device, test_loader, xnor_gates_list)
+                #     execute_with_TLU(model, device, test_loader, [current_xc])
                 #
                 time_elapsed += int(round(time.time()*1000)) - since
                 # print('Test time elapsed: {}ms'.format(int(round(time.time()*1000)) - since))
@@ -209,7 +209,7 @@ def main():
             print("Loaded model: ", to_load)
             model.load_state_dict(torch.load(to_load, map_location='cuda:0'))
 
-        xnor_gates_list = [4]#[4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256] #[4*x for x in range(1, 65)] #[2**x for x in range(2, 13)]
+        xnor_gates_list = [16]#[4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256] #[4*x for x in range(1, 65)] #[2**x for x in range(2, 13)]
         # test(model, device, test_loader)
         if args.tlu_mode is not None:
             # execute with TLU

@@ -269,6 +269,7 @@ class QuantizedConv2d(nn.Conv2d):
 
                 # unfold input
                 input_b = F.unfold(input, kernel_size=self.kernel_size, padding=self.padding, stride=self.stride).cuda()
+                # print("shape", input_b.shape)
 
                 # unfold kernels
                 weight_b = quantized_weight.view(self.out_channels,-1).cuda()

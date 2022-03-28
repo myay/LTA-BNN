@@ -1,6 +1,10 @@
 # TLU-BNN
 A framework for evaluating the TLU-based execution of BNNs.
 
+Tested setups:
+- Python 3.6.9, PyTorch 1.5.0, GeForce GTX 1060 6GB (Driver Version: 440.100, CUDA Version: 10.2)
+- Python 3.6.13 (conda), 1.7.0+cu110, GeForce GTX 1080 8GB (Driver Version: 450.102.04, CUDA Version: 11.0)
+
 Supported:
 - FashionMNIST, KMNIST, SVHN, CIFAR10
 - TLU computation for Linear and Conv2d layers
