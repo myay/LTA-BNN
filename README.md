@@ -1,4 +1,4 @@
-# TLU-BNN
+# LTA-BNN
 A framework for evaluating the TLU-based execution of BNNs.
 
 Tested setups:
