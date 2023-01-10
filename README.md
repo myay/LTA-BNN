@@ -40,4 +40,25 @@ For training based on TLU-execution, run
 
 ```python3 run.py --model=VGG3 --dataset=FMNIST --train-model=1 --tlu-train=1 --tlu-mode=1 --batch-size=256 --epochs=100 --lr=0.001 --step-size=10 --gpu-num=0 --save-model="FMNIST_TLU_TRAIN"```.
 
+| Command line parameter | Options |
+| :------------- |:-------------|
+| --model      | FC, VGG3, VGG7 |
+| --dataset      | MNIST, FMNIST, KMNIST, SVHN, CIFAR10 |
+| --tlu-mode      | int, whether to use TLU-based inference, default: None |
+| --nr-xnor-gates      | int, number of xnor gates in TLU execution, default: None |
+| --train-model      | int, whether to train a model, default: None |
+| --tlu-train      | int, whether TLU-based inference should be used in training, default: None |
+| --epochs      | int, number of epochs to train, default: 10|
+| --lr      | float, learning rate, default: 1.0|
+| --gamma      | float, learning rate step, default: 0.5|
+| --step-size      | int, learning rate step site, default: 5|
+| --batch-size      | int, specifies the batch size in training, default: 64|
+| --test-batch-size      | int, specifies the batch size in testing, default: 1000|
+| --save-model | string, saves a trained model with the specified name in the string, default:None |
+| --load-model-path | string, loads a model from the specified path in the string, default: None |
+| --load-training-state | string, saves a training state with the specified name in the string, default:None |
+| --save-training-state | string, loads a training state from the specified path in the string, default: None |
+| --gpu-num | int, specifies the GPU on which the training should be performed, default: 0 |
+| --profile-time | int, Specify whether to profile the execution time by specifying the repetitions, default: None |
+
 Please contact me if you have any questions: mikail.yayla@tu-dortmund.de.
