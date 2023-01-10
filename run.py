@@ -153,9 +153,12 @@ def main():
         model = nn_model().to(device)
         # print(model.fc1.weight.shape)
         # set xnor gates for all layers
-        for layer in model.children():
-            if isinstance(layer, (QuantizedConv2d, QuantizedLinear)):
-                layer.nr_xnor_gates = current_xc
+        # nr of xnor gates = 1 is reserved for "no TLU computations"
+        if current_xc != 1:
+            model.tlu_mode = args.tlu_mode
+            for layer in model.children():
+                if isinstance(layer, (QuantizedConv2d, QuantizedLinear)):
+                    layer.nr_xnor_gates = current_xc
 
         # create experiment folder and file
         to_dump_path = create_exp_folder(model)
@@ -208,14 +211,16 @@ def main():
             to_load = args.load_model_path
             print("Loaded model: ", to_load)
             model.load_state_dict(torch.load(to_load, map_location='cuda:0'))
+            model.tlu_mode = None
+            test(model, device, test_loader)
 
         xnor_gates_list = [64]#[4*x for x in range(1, 65)] #[4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256] #[4*x for x in range(1, 65)] #[2**x for x in range(2, 13)]
         # test(model, device, test_loader)
         # if args.tlu_mode is not None:
-            # execute with TLU
-            # execute_with_TLU_FashionCNN(model, device, test_loader, xnor_gates_list)
-            # execute_with_TLU(model, device, test_loader, xnor_gates_list)
-            # execute_with_TLU(model, device, train_loader, xnor_gates_list)
+        #     # execute with TLU
+        #     # execute_with_TLU_FashionCNN(model, device, test_loader, xnor_gates_list)
+        #     # execute_with_TLU(model, device, test_loader, xnor_gates_list)
+        #     execute_with_TLU(model, device, train_loader, xnor_gates_list)
 
         # print(model.eratel1)
         # erate1 = np.mean(np.array(model.eratel1))
@@ -371,55 +376,55 @@ def main():
     '''
 
 
-    # extract values of sliding windows
-    xnor_gates_stat = [16]
-    model.fc1.threshold_correction = 0
-    model.fc1.popc_acc_activate = 1
-    execute_with_TLU_FashionCNN(model, device, train_loader, xnor_gates_stat)
-    list_nparray = []
-    list_tensors = model.fc1.popc_acc
-    print(len(list_tensors))
-    for tens in list_tensors:
-        list_nparray.append(tens.cpu().numpy())
-    # np_list = np.array(list_nparray)/(1000*2*196)
-    np_list = np.array(list_nparray)/(1000*2)
-    print(np_list.shape)
-    np_list = np.round(np_list)
-    # print(np_list)
-    # np_list1 = np_list1.mean(axis=0)/(1000)
-    print(np_list.max())
-    print(np_list.min())
-
-    #plot histogram of values
-    mu, std = norm.fit(np_list.flatten())
-    s = np.random.normal(mu, std, 65)
-    curve = plt.hist(np_list.flatten(), bins=12, color='g')
-    xmin, xmax = plt.xlim()
-    x = np.arange(0, 65, 1, dtype=int)
-    p = norm.pdf(x, mu, std)
-    plt.plot(x, p, 'k', linewidth=2)
-    title = "Fit results: mu = %.2f,  std = %.2f" % (mu, std)
-    plt.title(title)
-    plt.savefig("distr_popc_paper_conv1.pdf", format="pdf")
-
-    print(curve)
-    # bins = curve.get_xdata()
-    # counts = curve.get_ydata()
-
-    # bins = curve[1]
-    # counts = curve[0]
-    bins, counts = np.unique(np_list.flatten(), return_counts=True)
-
-    # counts, bins, bars = plt.hist(np_list.flatten(), bins=16, color='g')
-    # print(bins)
-    # print(counts)
-    # TODO: print bins and values for tikz
-    for bin, count in zip(bins, counts):
-        print("{} {}".format(bin, count))
-    # Nr. of XNOR gates:  [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
-
-    # max_test_size = 64
-    # test_error_partial(model, device, test_loader, max_test_size)
-    #'''
+    # # extract values of sliding windows
+    # xnor_gates_stat = [16]
+    # model.fc1.threshold_correction = 0
+    # model.fc1.popc_acc_activate = 1
+    # execute_with_TLU_FashionCNN(model, device, train_loader, xnor_gates_stat)
+    # list_nparray = []
+    # list_tensors = model.fc1.popc_acc
+    # print(len(list_tensors))
+    # for tens in list_tensors:
+    #     list_nparray.append(tens.cpu().numpy())
+    # # np_list = np.array(list_nparray)/(1000*2*196)
+    # np_list = np.array(list_nparray)/(1000*2)
+    # print(np_list.shape)
+    # np_list = np.round(np_list)
+    # # print(np_list)
+    # # np_list1 = np_list1.mean(axis=0)/(1000)
+    # print(np_list.max())
+    # print(np_list.min())
+    #
+    # #plot histogram of values
+    # mu, std = norm.fit(np_list.flatten())
+    # s = np.random.normal(mu, std, 65)
+    # curve = plt.hist(np_list.flatten(), bins=12, color='g')
+    # xmin, xmax = plt.xlim()
+    # x = np.arange(0, 65, 1, dtype=int)
+    # p = norm.pdf(x, mu, std)
+    # plt.plot(x, p, 'k', linewidth=2)
+    # title = "Fit results: mu = %.2f,  std = %.2f" % (mu, std)
+    # plt.title(title)
+    # plt.savefig("distr_popc_paper_conv1.pdf", format="pdf")
+    #
+    # print(curve)
+    # # bins = curve.get_xdata()
+    # # counts = curve.get_ydata()
+    #
+    # # bins = curve[1]
+    # # counts = curve[0]
+    # bins, counts = np.unique(np_list.flatten(), return_counts=True)
+    #
+    # # counts, bins, bars = plt.hist(np_list.flatten(), bins=16, color='g')
+    # # print(bins)
+    # # print(counts)
+    # # TODO: print bins and values for tikz
+    # for bin, count in zip(bins, counts):
+    #     print("{} {}".format(bin, count))
+    # # Nr. of XNOR gates:  [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
+    #
+    # # max_test_size = 64
+    # # test_error_partial(model, device, test_loader, max_test_size)
+    # #'''
 if __name__ == '__main__':
     main()

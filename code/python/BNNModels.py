@@ -21,6 +21,7 @@ class BNN_VGG3(nn.Module):
         self.htanh = nn.Hardtanh()
         self.name = "BNN_VGG3"
         self.tlu_train = None
+        self.tlu_mode = None
 
         self.conv1 = QuantizedConv2d(1, 64, kernel_size=3, padding=1, padding_mode = 'replicate', stride=1, quantization=binarizepm1, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
@@ -42,7 +43,8 @@ class BNN_VGG3(nn.Module):
         self.eratel2 = []
 
     def forward(self, x):
-        extract_and_set_thresholds(self)
+        if self.tlu_mode is not None:
+            extract_and_set_thresholds(self)
         # conv2d block 1 does not use TLU (integer inputs)
         x = self.conv1(x)
         x = self.bn1(x)
