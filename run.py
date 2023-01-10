@@ -140,7 +140,7 @@ def main():
     train_loader = torch.utils.data.DataLoader(dataset1,**train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
-    cases_tlu_train = [16]#[4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256] #[4,8,12,16,24,32,48,64,96,128,192,256]
+    cases_tlu_train = None# [16]#[4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256] #[4,8,12,16,24,32,48,64,96,128,192,256]
     if args.tlu_train is not None:
         model.tlu_train = 1
     else:
@@ -209,13 +209,20 @@ def main():
             print("Loaded model: ", to_load)
             model.load_state_dict(torch.load(to_load, map_location='cuda:0'))
 
-        xnor_gates_list = [16]#[4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256] #[4*x for x in range(1, 65)] #[2**x for x in range(2, 13)]
+        xnor_gates_list = [64]#[4*x for x in range(1, 65)] #[4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256] #[4*x for x in range(1, 65)] #[2**x for x in range(2, 13)]
         # test(model, device, test_loader)
-        if args.tlu_mode is not None:
+        # if args.tlu_mode is not None:
             # execute with TLU
             # execute_with_TLU_FashionCNN(model, device, test_loader, xnor_gates_list)
-            execute_with_TLU(model, device, test_loader, xnor_gates_list)
+            # execute_with_TLU(model, device, test_loader, xnor_gates_list)
+            # execute_with_TLU(model, device, train_loader, xnor_gates_list)
 
+        # print(model.eratel1)
+        # erate1 = np.mean(np.array(model.eratel1))
+        # erate2 = np.mean(np.array(model.eratel2))
+        # print("--")
+        # print(f"({xnor_gates_list[0]}, {erate1})")
+        # print(f"({xnor_gates_list[0]}, {erate2})")
         # sets TLU-mode for each layer
         # extract_and_set_thresholds(model)
         # print_layer_data(model)
@@ -364,18 +371,51 @@ def main():
     '''
 
 
-    #plot histogram of values
-    # mu, std = norm.fit(np_list1.flatten())
-    # s = np.random.normal(mu, std, 100)
-    # plt.hist(np_list1.flatten(), bins=50, density=True, alpha=0.6, color='g')
-    # xmin, xmax = plt.xlim()
-    # x = np.linspace(xmin, xmax, 1000)
-    # p = norm.pdf(x, mu, std)
-    # plt.plot(x, p, 'k', linewidth=2)
-    # title = "Fit results: mu = %.2f,  std = %.2f" % (mu, std)
-    # plt.title(title)
-    # plt.savefig("distr_popc_conv1.pdf", format="pdf")
+    # extract values of sliding windows
+    xnor_gates_stat = [16]
+    model.fc1.threshold_correction = 0
+    model.fc1.popc_acc_activate = 1
+    execute_with_TLU_FashionCNN(model, device, train_loader, xnor_gates_stat)
+    list_nparray = []
+    list_tensors = model.fc1.popc_acc
+    print(len(list_tensors))
+    for tens in list_tensors:
+        list_nparray.append(tens.cpu().numpy())
+    # np_list = np.array(list_nparray)/(1000*2*196)
+    np_list = np.array(list_nparray)/(1000*2)
+    print(np_list.shape)
+    np_list = np.round(np_list)
+    # print(np_list)
+    # np_list1 = np_list1.mean(axis=0)/(1000)
+    print(np_list.max())
+    print(np_list.min())
 
+    #plot histogram of values
+    mu, std = norm.fit(np_list.flatten())
+    s = np.random.normal(mu, std, 65)
+    curve = plt.hist(np_list.flatten(), bins=12, color='g')
+    xmin, xmax = plt.xlim()
+    x = np.arange(0, 65, 1, dtype=int)
+    p = norm.pdf(x, mu, std)
+    plt.plot(x, p, 'k', linewidth=2)
+    title = "Fit results: mu = %.2f,  std = %.2f" % (mu, std)
+    plt.title(title)
+    plt.savefig("distr_popc_paper_conv1.pdf", format="pdf")
+
+    print(curve)
+    # bins = curve.get_xdata()
+    # counts = curve.get_ydata()
+
+    # bins = curve[1]
+    # counts = curve[0]
+    bins, counts = np.unique(np_list.flatten(), return_counts=True)
+
+    # counts, bins, bars = plt.hist(np_list.flatten(), bins=16, color='g')
+    # print(bins)
+    # print(counts)
+    # TODO: print bins and values for tikz
+    for bin, count in zip(bins, counts):
+        print("{} {}".format(bin, count))
     # Nr. of XNOR gates:  [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096]
 
     # max_test_size = 64

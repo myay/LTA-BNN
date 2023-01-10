@@ -58,6 +58,7 @@ def extract_and_set_thresholds(model):
                     idx += 1
                     layer.tlu_comp = 1
 
+import numpy as np
 def execute_with_TLU(model, device, test_loader, xnor_gates_list):
     # extract and set thresholds
     extract_and_set_thresholds(model)
@@ -71,6 +72,8 @@ def execute_with_TLU(model, device, test_loader, xnor_gates_list):
         # print("\n --- MAJV-SHIFT --- \n", majv_shift)
         for additional_sample in additional_samples:
             all_accuracies = []
+            all_l1 = []
+            all_l2 = []
             for nr_xnor in xnor_gates:
                 # set nr of xnor gates of each layer
                 print("\n --- xnor gates --- \n", nr_xnor)
@@ -79,6 +82,15 @@ def execute_with_TLU(model, device, test_loader, xnor_gates_list):
                         layer.nr_xnor_gates = nr_xnor
                 # print_layer_data(model)
                 accuracy = test(model, device, test_loader, pr=None)
+                # erate1 = np.mean(np.array(model.eratel1))
+                # erate2 = np.mean(np.array(model.eratel2))
+                # print("--")
+                # print(f"({nr_xnor}, {erate1})")
+                # print(f"({nr_xnor}, {erate2})")
+                # all_l1.append(erate1)
+                # all_l2.append(erate2)
+                # model.eratel1 = []
+                # model.eratel2 = []
                 # print(accuracy)
                 all_accuracies.append(accuracy)
             print("\n>> Add. samples: {}, Majv-shift: {}".format(additional_sample, majv_shift))
@@ -87,6 +99,14 @@ def execute_with_TLU(model, device, test_loader, xnor_gates_list):
             for idx, exp in enumerate(xnor_gates):
                 print_str = "({}, {})".format(xnor_gates[idx], all_accuracies[idx])
                 print(print_str)
+            # print("L1")
+            # for idx, exp in enumerate(xnor_gates):
+            #     print_str = "({}, {})".format(xnor_gates[idx], all_l1[idx])
+            #     print(print_str)
+            # print("L2")
+            # for idx, exp in enumerate(xnor_gates):
+            #     print_str = "({}, {})".format(xnor_gates[idx], all_l2[idx])
+            #     print(print_str)
 
 def execute_with_TLU_FashionCNN(model, device, test_loader, xnor_gates_list):
     # extract and set thresholds

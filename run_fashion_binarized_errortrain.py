@@ -19,6 +19,8 @@ from TLU_Utils import extract_and_set_thresholds, print_layer_data
 
 from QuantizedNN import QuantizedLinear, QuantizedConv2d, QuantizedActivation
 
+# from BNNModels import BNN_FMNIST
+
 import binarizePM1
 import binarizePM1FI
 
@@ -60,11 +62,7 @@ class BNN_FMNIST(nn.Module):
     def __init__(self):
         super(BNN_FMNIST, self).__init__()
         self.htanh = nn.Hardtanh()
-        self.relu = nn.ReLU()
         self.name = "BNN_FMNIST"
-        # self.method = {"type": "flip", "p": binarizepm1fi.p}
-        self.traincriterion = cel_train
-        self.testcriterion = cel_test
         self.tlu_mode = None
 
         self.conv1 = QuantizedConv2d(1, 64, kernel_size=3, padding=1, padding_mode = 'replicate', stride=1, quantization=binarizepm1, error_model=None, quantize_train=q_train, quantize_eval=q_eval, bias=False)
