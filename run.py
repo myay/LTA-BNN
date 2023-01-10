@@ -41,7 +41,6 @@ from BNNModels import BNN_VGG3, BNN_VGG7
 
 # nr_xnor_const = [4,8,16,32,64,128,256] #[4,8,12,16,24,32,48,64,96,128,192,256]
 # nr_xnor_const = [4,8]
-current_xc = 4
 
 def main():
     # Training settings
@@ -146,96 +145,94 @@ def main():
     else:
         cases_tlu_train = [1]
 
-    for xnor_gates_n in cases_tlu_train:
-        current_xc = xnor_gates_n
-        print("\n--- XNOR GATES: ", current_xc)
+    current_xc = args.nr_xnor_gates
+    print("\n--- XNOR GATES: ", current_xc)
 
-        model = nn_model().to(device)
-        # print(model.fc1.weight.shape)
-        # set xnor gates for all layers
-        # nr of xnor gates = 1 is reserved for "no TLU computations"
-        if current_xc != 1:
-            model.tlu_mode = args.tlu_mode
-            for layer in model.children():
-                if isinstance(layer, (QuantizedConv2d, QuantizedLinear)):
-                    layer.nr_xnor_gates = current_xc
+    model = nn_model().to(device)
+    # print(model.fc1.weight.shape)
+    # set xnor gates for all layers
+    # nr of xnor gates = 1 is reserved for "no TLU computations"
+    if current_xc != 1:
+        model.tlu_mode = args.tlu_mode
+        for layer in model.children():
+            if isinstance(layer, (QuantizedConv2d, QuantizedLinear)):
+                layer.nr_xnor_gates = current_xc
 
-        # create experiment folder and file
-        to_dump_path = create_exp_folder(model)
-        if not os.path.exists(to_dump_path):
-            open(to_dump_path, 'w').close()
+    # create experiment folder and file
+    to_dump_path = create_exp_folder(model)
+    if not os.path.exists(to_dump_path):
+        open(to_dump_path, 'w').close()
 
-        # optimizer = optim.Adam(model.parameters(), lr=args.lr)
-        optimizer = Clippy(model.parameters(), lr=args.lr)
+    # optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    optimizer = Clippy(model.parameters(), lr=args.lr)
 
-        scheduler = StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)
+    scheduler = StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)
 
-        time_elapsed = 0
-        times = []
+    time_elapsed = 0
+    times = []
 
-        if args.train_model is not None:
-            for epoch in range(1, args.epochs + 1):
-                torch.cuda.synchronize()
-                since = int(round(time.time()*1000))
-                #
-                train(args, model, device, train_loader, optimizer, epoch)
-                #
-                time_elapsed += int(round(time.time()*1000)) - since
-                print('Epoch training time elapsed: {}ms'.format(int(round(time.time()*1000)) - since))
-                # test(model, device, train_loader)
-                since = int(round(time.time()*1000))
-                #
-                test(model, device, test_loader)
-                # if args.tlu_mode is not None:
-                # #     # execute with TLU
-                # #     # execute_with_TLU_FashionCNN(model, device, test_loader, xnor_gates_list)
-                #     execute_with_TLU(model, device, test_loader, [current_xc])
-                #
-                time_elapsed += int(round(time.time()*1000)) - since
-                # print('Test time elapsed: {}ms'.format(int(round(time.time()*1000)) - since))
-                # test(model, device, train_loader)
-                scheduler.step()
-
-        if args.test_error:
-            all_accuracies = test_error(model, device, test_loader)
-            to_dump_data = dump_exp_data(model, args, all_accuracies)
-            store_exp_data(to_dump_path, to_dump_data)
-
-        if args.save_model is not None:
-            torch.save(model.state_dict(), "model_{}_{}.pt".format(args.save_model, current_xc))
-
-        #'''
-        # load model
-        # to_load = "models/train_tlu/fashion/fmnist_cnn_xnor_mhl_32.pt"
-        if args.load_model_path is not None:
-            to_load = args.load_model_path
-            print("Loaded model: ", to_load)
-            model.load_state_dict(torch.load(to_load, map_location='cuda:0'))
-            model.tlu_mode = None
+    if args.train_model is not None:
+        for epoch in range(1, args.epochs + 1):
+            torch.cuda.synchronize()
+            since = int(round(time.time()*1000))
+            #
+            train(args, model, device, train_loader, optimizer, epoch)
+            #
+            time_elapsed += int(round(time.time()*1000)) - since
+            print('Epoch training time elapsed: {}ms'.format(int(round(time.time()*1000)) - since))
+            # test(model, device, train_loader)
+            since = int(round(time.time()*1000))
+            #
             test(model, device, test_loader)
+            # if args.tlu_mode is not None:
+            # #     # execute with TLU
+            # #     # execute_with_TLU_FashionCNN(model, device, test_loader, xnor_gates_list)
+            #     execute_with_TLU(model, device, test_loader, [current_xc])
+            #
+            time_elapsed += int(round(time.time()*1000)) - since
+            # print('Test time elapsed: {}ms'.format(int(round(time.time()*1000)) - since))
+            # test(model, device, train_loader)
+            scheduler.step()
 
-        xnor_gates_list = [64]#[4*x for x in range(1, 65)] #[4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256] #[4*x for x in range(1, 65)] #[2**x for x in range(2, 13)]
-        # test(model, device, test_loader)
-        # if args.tlu_mode is not None:
-        #     # execute with TLU
-        #     # execute_with_TLU_FashionCNN(model, device, test_loader, xnor_gates_list)
-        #     # execute_with_TLU(model, device, test_loader, xnor_gates_list)
-        #     execute_with_TLU(model, device, train_loader, xnor_gates_list)
+    if args.test_error:
+        all_accuracies = test_error(model, device, test_loader)
+        to_dump_data = dump_exp_data(model, args, all_accuracies)
+        store_exp_data(to_dump_path, to_dump_data)
 
-        # print(model.eratel1)
-        # erate1 = np.mean(np.array(model.eratel1))
-        # erate2 = np.mean(np.array(model.eratel2))
-        # print("--")
-        # print(f"({xnor_gates_list[0]}, {erate1})")
-        # print(f"({xnor_gates_list[0]}, {erate2})")
-        # sets TLU-mode for each layer
-        # extract_and_set_thresholds(model)
-        # print_layer_data(model)
-        # execute_with_TLU(model, device, test_loader, xnor_gates_list)
-        # print_layer_data(model)
-        # p2 = [2**x for x in range(2, 13)]
-        # p2 = [3136]
-        # threshold correction based on percentage
+    if args.save_model is not None:
+        torch.save(model.state_dict(), "model_{}_{}.pt".format(args.save_model, current_xc))
+
+    #'''
+    # load model
+    # to_load = "models/train_tlu/fashion/fmnist_cnn_xnor_mhl_32.pt"
+    if args.load_model_path is not None:
+        to_load = args.load_model_path
+        print("Loaded model: ", to_load)
+        model.load_state_dict(torch.load(to_load, map_location='cuda:0'))
+        test(model, device, test_loader)
+
+    # xnor_gates_list = [64]#[4*x for x in range(1, 65)] #[4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256] #[4*x for x in range(1, 65)] #[2**x for x in range(2, 13)]
+    # test(model, device, test_loader)
+    # if args.tlu_mode is not None:
+    #     # execute with TLU
+    #     # execute_with_TLU_FashionCNN(model, device, test_loader, xnor_gates_list)
+    #     # execute_with_TLU(model, device, test_loader, xnor_gates_list)
+    #     execute_with_TLU(model, device, train_loader, xnor_gates_list)
+
+    # print(model.eratel1)
+    # erate1 = np.mean(np.array(model.eratel1))
+    # erate2 = np.mean(np.array(model.eratel2))
+    # print("--")
+    # print(f"({xnor_gates_list[0]}, {erate1})")
+    # print(f"({xnor_gates_list[0]}, {erate2})")
+    # sets TLU-mode for each layer
+    # extract_and_set_thresholds(model)
+    # print_layer_data(model)
+    # execute_with_TLU(model, device, test_loader, xnor_gates_list)
+    # print_layer_data(model)
+    # p2 = [2**x for x in range(2, 13)]
+    # p2 = [3136]
+    # threshold correction based on percentage
     '''
     ### threshold correction based on Fabio's method
     # get average popcounts of each neuron

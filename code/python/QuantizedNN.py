@@ -256,7 +256,7 @@ class QuantizedConv2d(nn.Conv2d):
             # TLU-computation
             if self.tlu_comp is not None:
                 # print("Executing with TLU: ", self.name)
-                print("Executing with TLU: ", self.tlu_comp)
+                # print("Executing with TLU: ", self.tlu_comp)
                 # print("Nr. of xnor gates: ", self.nr_xnor_gates)
 
                 # get tensors in form of matrix multiplication
