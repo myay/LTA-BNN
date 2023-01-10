@@ -18,7 +18,7 @@ sys.path.append("code/python/")
 from scipy.stats import norm
 import matplotlib.pyplot as plt
 
-from Utils import set_layer_mode, parse_args, dump_exp_data, create_exp_folder, store_exp_data
+from Utils import set_layer_mode, parse_args, dump_exp_data, create_exp_folder, store_exp_data, print_tikz_data
 
 from Traintest_Utils import train, test, Criterion, binary_hingeloss, Clippy
 
@@ -170,28 +170,17 @@ def main():
 
     time_elapsed = 0
     times = []
-
     if args.train_model is not None:
         for epoch in range(1, args.epochs + 1):
-            torch.cuda.synchronize()
-            since = int(round(time.time()*1000))
-            #
+            start = torch.cuda.Event(enable_timing=True)
+            end = torch.cuda.Event(enable_timing=True)
+            start.record()
             train(args, model, device, train_loader, optimizer, epoch)
-            #
-            time_elapsed += int(round(time.time()*1000)) - since
-            print('Epoch training time elapsed: {}ms'.format(int(round(time.time()*1000)) - since))
-            # test(model, device, train_loader)
-            since = int(round(time.time()*1000))
-            #
+            end.record()
+            torch.cuda.synchronize()
+            print("Run time (ms):", start.elapsed_time(end))
+            times.append(start.elapsed_time(end))
             test(model, device, test_loader)
-            # if args.tlu_mode is not None:
-            # #     # execute with TLU
-            # #     # execute_with_TLU_FashionCNN(model, device, test_loader, xnor_gates_list)
-            #     execute_with_TLU(model, device, test_loader, [current_xc])
-            #
-            time_elapsed += int(round(time.time()*1000)) - since
-            # print('Test time elapsed: {}ms'.format(int(round(time.time()*1000)) - since))
-            # test(model, device, train_loader)
             scheduler.step()
 
     if args.test_error:
@@ -210,6 +199,10 @@ def main():
         print("Loaded model: ", to_load)
         model.load_state_dict(torch.load(to_load, map_location='cuda:0'))
         test(model, device, test_loader)
+
+    if args.profile_time is not None:
+        print_tikz_data(times)
+
 
     # xnor_gates_list = [64]#[4*x for x in range(1, 65)] #[4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256] #[4*x for x in range(1, 65)] #[2**x for x in range(2, 13)]
     # test(model, device, test_loader)

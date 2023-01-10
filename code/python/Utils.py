@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import numpy as np
 import argparse
 import os
 from datetime import datetime
@@ -50,6 +51,8 @@ def parse_args(parser):
                         help='Specify name for saving model')
     parser.add_argument('--test-error', action='store_true', default=False, help='Test accuracy under errors')
     parser.add_argument('--silent', type=int, default=None, help='Whether to print training data')
+    parser.add_argument('--profile-time', type=int, default=None, help='Whether to profile training time')
+
 
 def dump_exp_data(model, args, all_accuracies):
     to_dump = dict()
@@ -78,5 +81,11 @@ def store_exp_data(to_dump_path, to_dump_data):
     with open(to_dump_path, 'a') as outfile:
         json.dump(to_dump_data, outfile)
         print ("Successfully stored results in %s" % to_dump_path)
+
+def print_tikz_data(in_array):
+    accs_mean = np.mean(np.array(in_array), axis=0)
+    accs_min = np.min(np.array(in_array), axis=0)
+    accs_max = np.max(np.array(in_array), axis=0)
+    print("{} {} {}".format(accs_mean, accs_max - accs_mean, accs_mean - accs_min))
 
 # TODO: ONNX save
