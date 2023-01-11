@@ -1,5 +1,5 @@
 # LTA-BNN
-A framework for evaluating the TLU-based execution of BNNs.
+The framework for evaluating the LTA-based execution of BNNs, used in the paper with the title "Global by Local Thresholding in Binarized Neural Networksfor Efficient Crossbar Accelerator Design".
 
 Tested setups:
 - Python 3.6.9, PyTorch 1.5.0, GeForce GTX 1060 6GB (Driver Version: 440.100, CUDA Version: 10.2)
@@ -7,20 +7,17 @@ Tested setups:
 - Python 3.9.7, PyTorch 1.9.0, GeForce GTX 3080 10GB (Driver Version: 512.15, CUDA Version: 11.6)
 
 Supported:
-- FashionMNIST, KMNIST, SVHN, CIFAR10
+- Datasets: FashionMNIST, KMNIST, SVHN, CIFAR10
+- BNN Models: VGG3, VGG7
 - TLU computation for Linear and Conv2d layers
 - Variable number of xnor gates
 - Additional sampling windows (1-2 more)
 - Variable majority vote shift
 - Threshold scaling (factor 2 supported)
 - Threshold correction and custom threshold mechanisms
-- Training with TLU-based execution
+- (Re)Training with TLU-based execution
 
-TODOs:
-- Saving training state of BNN for retraining
-- Larger BNN models, e.g. CIFAR100
-
-#### CUDA-based Binarization, TLU-based execution, and Error Injection
+#### CUDA-based Binarization, LTA-based execution, and Error Injection
 
 First, install PyTorch. For high performance, CUDA support is needed. To enable it, install pybind11 and CUDA toolkit.
 
@@ -32,11 +29,11 @@ After successful installation of all kernels, for training run
 
 ```python3 run.py --model=VGG3 --dataset=FMNIST --train-model=1 --batch-size=256 --epochs=100 --lr=0.001 --step-size=10 --gpu-num=0 --save-model="model_name"```.
 
-Then, for TLU-based inference, run
+Then, for LTA-based inference, run
 
 ```python3 run.py --model=VGG3 --dataset=FMNIST --load-model-path="model_name.pt" --tlu-mode=1 --test-batch-size=1000 --gpu-num=0```.
 
-For training based on TLU-execution, run
+For training based on LTA-execution, run
 
 ```python3 run.py --model=VGG3 --dataset=FMNIST --train-model=1 --tlu-train=1 --tlu-mode=1 --batch-size=256 --epochs=100 --lr=0.001 --step-size=10 --gpu-num=0 --save-model="FMNIST_TLU_TRAIN"```.
 
