@@ -49,6 +49,10 @@ def parse_args(parser):
                         help='how many batches to wait before logging training status')
     parser.add_argument('--save-model', type=str, default=None,
                         help='Specify name for saving model')
+    parser.add_argument('--load-training-state', type=str, default=None,
+                        help='Specify path for loading the training state')
+    parser.add_argument('--save-training-state', type=str, default=None,
+                        help='Specify path for saving the training state')                    
     parser.add_argument('--test-error', action='store_true', default=False, help='Test accuracy under errors')
     parser.add_argument('--silent', type=int, default=None, help='Whether to print training data')
     parser.add_argument('--profile-time', type=int, default=None, help='Whether to profile training time')

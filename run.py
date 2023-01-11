@@ -167,6 +167,13 @@ def main():
 
     scheduler = StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)
 
+    # load training state or create new model
+    if args.load_training_state is not None:
+        print("Loaded training state: ", args.load_training_state)
+        checkpoint = torch.load(args.load_training_state)
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
     time_elapsed = 0
     times = []
     if args.train_model is not None:
@@ -189,6 +196,15 @@ def main():
 
     if args.save_model is not None:
         torch.save(model.state_dict(), "model_{}_{}.pt".format(args.save_model, current_xc))
+
+    if args.save_training_state is not None:
+        path = "model_checkpoint_{}.pt".format(args.save_training_state)
+        torch.save({
+        'epoch': args.epochs,
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        }, path)
+        print("Training state saved.")
 
     if args.load_model_path is not None:
         to_load = args.load_model_path
