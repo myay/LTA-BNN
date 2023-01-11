@@ -18,7 +18,7 @@ sys.path.append("code/python/")
 from scipy.stats import norm
 import matplotlib.pyplot as plt
 
-from Utils import set_layer_mode, parse_args, dump_exp_data, create_exp_folder, store_exp_data, print_tikz_data
+from Utils import parse_args, dump_exp_data, create_exp_folder, store_exp_data, print_tikz_data, get_model_and_datasets
 
 from Traintest_Utils import train, test, Criterion, binary_hingeloss, Clippy
 
@@ -27,20 +27,6 @@ from TLU_Utils import extract_and_set_thresholds, execute_with_TLU_FashionCNN, p
 from QuantizedNN import QuantizedLinear, QuantizedConv2d, QuantizedActivation
 
 from BNNModels import BNN_VGG3, BNN_VGG3_TLUTRAIN, BNN_VGG7
-
-#tmux new-session -d -s kmnist-tlu  'python3 run.py --model=VGG3 --dataset=KMNIST --train-model=1 --tlu-train=1 --tlu-mode=1 --batch-size=256 --epochs=100 --lr=0.001 --step-size=10 --gpu-num=0 --save-model="KMNIST_TLU_TRAIN" >> exp-res-kmnist-tlutrain_corrected.txt'
-
-# training
-# python3 run_fashion_binarized.py --model=BNN_FASHION_CNN --train-model=1 --batch-size=256 --epochs=1 --lr=0.001 --step-size=10 --gpu-num=0 --save-model="model_name.pt"
-
-# training cifar10
-# run_fashion_binarized.py --model=BNN_CIFAR10_CNN --train-model=1 --batch-size=256 --epochs=2 --lr=0.001 --step-size=50 --gpu-num=0 --save-model="model_cifar10.pt"
-
-# inference
-# python3 run_fashion_binarized.py --model=BNN_FASHION_CNN --load-model-path="model_name.pt" --tlu-mode=1 --test-batch-size=1000 --gpu-num=0
-
-# nr_xnor_const = [4,8,16,32,64,128,256] #[4,8,12,16,24,32,48,64,96,128,192,256]
-# nr_xnor_const = [4,8]
 
 def main():
     # Training settings
@@ -55,9 +41,9 @@ def main():
     available_gpus = [i for i in range(torch.cuda.device_count())]
     print("Available GPUs: ", available_gpus)
     gpu_select = args.gpu_num
-    # change GPU that is being used
+    # use selected GPU
     torch.cuda.set_device(gpu_select)
-    # which GPU is currently used
+    # GPU that is currently used
     print("Currently used GPU: ", torch.cuda.current_device())
 
     train_kwargs = {'batch_size': args.batch_size}
@@ -69,86 +55,14 @@ def main():
         train_kwargs.update(cuda_kwargs)
         test_kwargs.update(cuda_kwargs)
 
-    nn_model = None
-    model = None
-    dataset1 = None
-    dataset2 = None
-    if args.model == "VGG3":
-        if args.tlu_train is not None:
-            nn_model = BNN_VGG3_TLUTRAIN
-            model = nn_model().cuda()
-            print("using tlu-train model")
-        else:
-            print("using normal model")
-            nn_model = BNN_VGG3
-            model = nn_model().cuda()
-    if args.model == "VGG7":
-        nn_model = BNN_VGG7
-        model = nn_model().cuda()
-
-    if args.dataset == "MNIST":
-        transform=transforms.Compose([
-            transforms.ToTensor(),
-            ])
-        dataset1 = datasets.MNIST('data', train=True, download=True, transform=transform)
-        dataset2 = datasets.MNIST('data', train=False, transform=transform)
-
-    if args.dataset == "FMNIST":
-        transform=transforms.Compose([
-            transforms.ToTensor(),
-            ])
-        dataset1 = datasets.FashionMNIST('data', train=True, download=True, transform=transform)
-        dataset2 = datasets.FashionMNIST('data', train=False, transform=transform)
-
-    if args.dataset == "KMNIST":
-        transform=transforms.Compose([
-            transforms.ToTensor(),
-            ])
-        dataset1 = datasets.KMNIST(root="data/KMNIST/", train=True, download=True, transform=transform)
-        dataset2 = datasets.KMNIST('data/KMNIST/', train=False, download=True, transform=transform)
-
-    if args.dataset == "SVHN":
-        transform=transforms.Compose([
-            transforms.ToTensor(),
-            ])
-        dataset1 = datasets.SVHN(root="data/SVHN/", split="train", download=True, transform=transform)
-        dataset2 = datasets.SVHN(root="data/SVHN/", split="test", download=True, transform=transform)
-
-    if args.dataset == "CIFAR10":
-        transform_train=transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-            ])
-        transform_test=transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-            ])
-        dataset1 = datasets.CIFAR10('data', train=True, download=True, transform=transform_train)
-        dataset2 = datasets.CIFAR10('data', train=False, transform=transform_test)
-
-    if args.dataset == "CIFAR100":
-        transform_train=transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-            ])
-        transform_test=transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-            ])
-        dataset1 = datasets.CIFAR100('data', train=True, download=True, transform=transform_train)
-        dataset2 = datasets.CIFAR100('data', train=False, transform=transform_test)
+    nn_model, dataset1, dataset2 = get_model_and_datasets(args)
+    model = nn_model().to(device)
 
     train_loader = torch.utils.data.DataLoader(dataset1,**train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
     current_xc = args.nr_xnor_gates
     print("\n--- XNOR GATES: ", current_xc)
-
-    model = nn_model().to(device)
 
     # nr of xnor gates = 1 is reserved for "no TLU computations"
     if current_xc != 1:
@@ -176,6 +90,7 @@ def main():
 
     time_elapsed = 0
     times = []
+    # taining loop
     if args.train_model is not None:
         for epoch in range(1, args.epochs + 1):
             start = torch.cuda.Event(enable_timing=True)

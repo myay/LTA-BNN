@@ -7,7 +7,13 @@ import json
 
 from QuantizedNN import QuantizedLinear, QuantizedConv2d, QuantizedActivation
 
-from Utils import set_layer_mode
+def set_layer_mode(model, mode):
+    for layer in model.children():
+        if isinstance(layer, (QuantizedActivation, QuantizedLinear, QuantizedConv2d)):
+            if mode == "train":
+                layer.training = True
+            if mode == "eval":
+                layer.eval = False
 
 def train(args, model, device, train_loader, optimizer, epoch):
     model.train()

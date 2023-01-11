@@ -1,20 +1,15 @@
 import torch
 import torch.nn as nn
+from torchvision import datasets, transforms
 import numpy as np
 import argparse
 import os
 from datetime import datetime
 import json
 
-from QuantizedNN import QuantizedLinear, QuantizedConv2d, QuantizedActivation
+from BNNModels import BNN_VGG3, BNN_VGG3_TLUTRAIN, BNN_VGG7
 
-def set_layer_mode(model, mode):
-    for layer in model.children():
-        if isinstance(layer, (QuantizedActivation, QuantizedLinear, QuantizedConv2d)):
-            if mode == "train":
-                layer.training = True
-            if mode == "eval":
-                layer.eval = False
+from QuantizedNN import QuantizedLinear, QuantizedConv2d, QuantizedActivation
 
 def parse_args(parser):
     parser.add_argument('--model', type=str, default=None,
@@ -52,11 +47,79 @@ def parse_args(parser):
     parser.add_argument('--load-training-state', type=str, default=None,
                         help='Specify path for loading the training state')
     parser.add_argument('--save-training-state', type=str, default=None,
-                        help='Specify path for saving the training state')                    
+                        help='Specify path for saving the training state')
     parser.add_argument('--test-error', action='store_true', default=False, help='Test accuracy under errors')
     parser.add_argument('--silent', type=int, default=None, help='Whether to print training data')
     parser.add_argument('--profile-time', type=int, default=None, help='Whether to profile training time')
 
+def get_model_and_datasets(args):
+    nn_model = None
+    dataset1 = None
+    dataset2 = None
+    if args.model == "VGG3":
+        if args.tlu_train is not None:
+            nn_model = BNN_VGG3_TLUTRAIN
+        else:
+            nn_model = BNN_VGG3
+    if args.model == "VGG7":
+        nn_model = BNN_VGG7
+
+    if args.dataset == "MNIST":
+        transform=transforms.Compose([
+            transforms.ToTensor(),
+            ])
+        dataset1 = datasets.MNIST('data', train=True, download=True, transform=transform)
+        dataset2 = datasets.MNIST('data', train=False, transform=transform)
+
+    if args.dataset == "FMNIST":
+        transform=transforms.Compose([
+            transforms.ToTensor(),
+            ])
+        dataset1 = datasets.FashionMNIST('data', train=True, download=True, transform=transform)
+        dataset2 = datasets.FashionMNIST('data', train=False, transform=transform)
+
+    if args.dataset == "KMNIST":
+        transform=transforms.Compose([
+            transforms.ToTensor(),
+            ])
+        dataset1 = datasets.KMNIST(root="data/KMNIST/", train=True, download=True, transform=transform)
+        dataset2 = datasets.KMNIST('data/KMNIST/', train=False, download=True, transform=transform)
+
+    if args.dataset == "SVHN":
+        transform=transforms.Compose([
+            transforms.ToTensor(),
+            ])
+        dataset1 = datasets.SVHN(root="data/SVHN/", split="train", download=True, transform=transform)
+        dataset2 = datasets.SVHN(root="data/SVHN/", split="test", download=True, transform=transform)
+
+    if args.dataset == "CIFAR10":
+        transform_train=transforms.Compose([
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+            ])
+        transform_test=transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+            ])
+        dataset1 = datasets.CIFAR10('data', train=True, download=True, transform=transform_train)
+        dataset2 = datasets.CIFAR10('data', train=False, transform=transform_test)
+
+    if args.dataset == "CIFAR100":
+        transform_train=transforms.Compose([
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+            ])
+        transform_test=transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+            ])
+        dataset1 = datasets.CIFAR100('data', train=True, download=True, transform=transform_train)
+        dataset2 = datasets.CIFAR100('data', train=False, transform=transform_test)
+    return nn_model, dataset1, dataset2
 
 def dump_exp_data(model, args, all_accuracies):
     to_dump = dict()
