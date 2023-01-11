@@ -7,7 +7,7 @@ import os
 from datetime import datetime
 import json
 
-from BNNModels import BNN_VGG3, BNN_VGG3_TLUTRAIN, BNN_VGG7
+from BNNModels import BNN_VGG3, BNN_VGG3_TLUTRAIN, BNN_VGG7, BNN_VGG7_TLUTRAIN
 
 from QuantizedNN import QuantizedLinear, QuantizedConv2d, QuantizedActivation
 
@@ -62,7 +62,10 @@ def get_model_and_datasets(args):
         else:
             nn_model = BNN_VGG3
     if args.model == "VGG7":
-        nn_model = BNN_VGG7
+        if args.tlu_train is not None:
+            nn_model = BNN_VGG7_TLUTRAIN
+        else:
+            nn_model = BNN_VGG7
 
     if args.dataset == "MNIST":
         transform=transforms.Compose([
