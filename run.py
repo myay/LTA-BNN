@@ -26,7 +26,7 @@ from TLU_Utils import extract_and_set_thresholds, execute_with_TLU_FashionCNN, p
 
 from QuantizedNN import QuantizedLinear, QuantizedConv2d, QuantizedActivation
 
-from BNNModels import BNN_VGG3, BNN_VGG7
+from BNNModels import BNN_VGG3, BNN_VGG3_TLUTRAIN, BNN_VGG7
 
 #tmux new-session -d -s kmnist-tlu  'python3 run.py --model=VGG3 --dataset=KMNIST --train-model=1 --tlu-train=1 --tlu-mode=1 --batch-size=256 --epochs=100 --lr=0.001 --step-size=10 --gpu-num=0 --save-model="KMNIST_TLU_TRAIN" >> exp-res-kmnist-tlutrain_corrected.txt'
 
@@ -74,8 +74,14 @@ def main():
     dataset1 = None
     dataset2 = None
     if args.model == "VGG3":
-        nn_model = BNN_VGG3
-        model = nn_model().cuda()
+        if args.tlu_train is not None:
+            nn_model = BNN_VGG3_TLUTRAIN
+            model = nn_model().cuda()
+            print("using tlu-train model")
+        else:
+            print("using normal model")
+            nn_model = BNN_VGG3
+            model = nn_model().cuda()
     if args.model == "VGG7":
         nn_model = BNN_VGG7
         model = nn_model().cuda()
@@ -139,18 +145,11 @@ def main():
     train_loader = torch.utils.data.DataLoader(dataset1,**train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
-    cases_tlu_train = None# [16]#[4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256] #[4,8,12,16,24,32,48,64,96,128,192,256]
-    if args.tlu_train is not None:
-        model.tlu_train = 1
-    else:
-        cases_tlu_train = [1]
-
     current_xc = args.nr_xnor_gates
     print("\n--- XNOR GATES: ", current_xc)
 
     model = nn_model().to(device)
-    # print(model.fc1.weight.shape)
-    # set xnor gates for all layers
+
     # nr of xnor gates = 1 is reserved for "no TLU computations"
     if current_xc != 1:
         model.tlu_mode = args.tlu_mode
@@ -191,9 +190,6 @@ def main():
     if args.save_model is not None:
         torch.save(model.state_dict(), "model_{}_{}.pt".format(args.save_model, current_xc))
 
-    #'''
-    # load model
-    # to_load = "models/train_tlu/fashion/fmnist_cnn_xnor_mhl_32.pt"
     if args.load_model_path is not None:
         to_load = args.load_model_path
         print("Loaded model: ", to_load)
@@ -202,7 +198,6 @@ def main():
 
     if args.profile_time is not None:
         print_tikz_data(times)
-
 
     # xnor_gates_list = [64]#[4*x for x in range(1, 65)] #[4, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256] #[4*x for x in range(1, 65)] #[2**x for x in range(2, 13)]
     # test(model, device, test_loader)

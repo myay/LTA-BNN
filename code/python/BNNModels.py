@@ -36,15 +36,12 @@ class BNN_VGG3(nn.Module):
         self.qact3 = QuantizedActivation(quantization=binarizepm1)
 
         self.fc2 = QuantizedLinear(2048, 10, quantization=binarizepm1, bias=False)
-        # self.fc2 = nn.Linear(2048, 10)
         self.scale = Scale(init_value=1e-3)
-
-        self.eratel1 = []
-        self.eratel2 = []
 
     def forward(self, x):
         if self.tlu_mode is not None:
             extract_and_set_thresholds(self)
+
         # conv2d block 1 does not use TLU (integer inputs)
         x = self.conv1(x)
         x = self.bn1(x)
@@ -52,40 +49,6 @@ class BNN_VGG3(nn.Module):
         x = self.qact1(x)
         x = F.max_pool2d(x, 2)
 
-        # if self.tlu_train is not None:
-        # conv2d block 2
-        # xt1 = x
-        # self.conv2.tlu_comp = None
-        # xt1 = x.clone().detach()
-        # x = self.conv2(x)
-        # x = self.bn2(x)
-        # x = self.htanh(x)
-        # x = self.qact2(x)
-        # # TLU-based execution
-        # self.conv2.tlu_comp = 1 # for training with errors
-        # x.data.copy_(self.conv2(xt1).data)
-        # x = F.max_pool2d(x, 2)
-        #
-        # # fc block 1
-        # x = torch.flatten(x, 1)
-        # xt2 = x
-        # self.fc1.tlu_comp = None
-        # xt2 = x.clone().detach()
-        # x = self.fc1(x)
-        # x = self.bn3(x)
-        # x = self.htanh(x)
-        # x = self.qact3(x)
-        # # TLU-based execution
-        # self.fc1.tlu_comp = 1
-        # x.data.copy_(self.fc1(xt2).data)
-        # else:
-        # conv2d block 2
-        # x1 = x.clone()
-        # x1 = self.conv2(x1)
-        # x1 = self.bn2(x1)
-        # x1 = self.htanh(x1)
-        # x1 = self.qact2(x1)
-        # x1 = F.max_pool2d(x1, 2)
         if self.conv2.tlu_comp is not None:
             x = self.conv2(x)
         else:
@@ -95,18 +58,8 @@ class BNN_VGG3(nn.Module):
             x = self.qact2(x)
         x = F.max_pool2d(x, 2)
 
-        # e_rate = torch.div(torch.sum(~torch.eq(x1,x)).float(), torch.numel(x))
-        # print("error rate L1", e_rate)
-        # self.eratel1.append(e_rate.item())
-        # print("x", x)
-        # print("x1", x1)
         # fc block 1
         x = torch.flatten(x, 1)
-        # x1 = torch.flatten(x1, 1)
-        # x1 = self.fc1(x1)
-        # x1 = self.bn3(x1)
-        # x1 = self.htanh(x1)
-        # x1 = self.qact3(x1)
         if self.fc1.tlu_comp is not None:
             x = self.fc1(x)
         else:
@@ -115,9 +68,69 @@ class BNN_VGG3(nn.Module):
             x = self.htanh(x)
             x = self.qact3(x)
 
-        # e_rate = torch.div(torch.sum(~torch.eq(x1,x)).float(), torch.numel(x))
-        # print("error rate L2", e_rate)
-        # self.eratel2.append(e_rate.item())
+        # fc block 2 does not use TLU (no binarization)
+        x = self.fc2(x)
+        x = self.scale(x)
+        return x
+
+class BNN_VGG3_TLUTRAIN(nn.Module):
+    def __init__(self):
+        super(BNN_VGG3_TLUTRAIN, self).__init__()
+        self.htanh = nn.Hardtanh()
+        self.name = "BNN_VGG3"
+        self.tlu_train = None
+        self.tlu_mode = None
+
+        self.conv1 = QuantizedConv2d(1, 64, kernel_size=3, padding=1, padding_mode = 'replicate', stride=1, quantization=binarizepm1, bias=False)
+        self.bn1 = nn.BatchNorm2d(64)
+        self.qact1 = QuantizedActivation(quantization=binarizepm1)
+
+        self.conv2 = QuantizedConv2d(64, 64, kernel_size=3, padding=1, padding_mode = 'replicate', stride=1, quantization=binarizepm1, bias=False)
+        self.bn2 = nn.BatchNorm2d(64)
+        self.qact2 = QuantizedActivation(quantization=binarizepm1)
+
+        self.fc1 = QuantizedLinear(7*7*64, 2048, quantization=binarizepm1, bias=False)
+        self.bn3 = nn.BatchNorm1d(2048)
+        self.qact3 = QuantizedActivation(quantization=binarizepm1)
+
+        self.fc2 = QuantizedLinear(2048, 10, quantization=binarizepm1, bias=False)
+        self.scale = Scale(init_value=1e-3)
+
+    def forward(self, x):
+        extract_and_set_thresholds(self)
+
+        # conv2d block 1 does not use TLU (integer inputs)
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.htanh(x)
+        x = self.qact1(x)
+        x = F.max_pool2d(x, 2)
+
+        # Use with clone and detach for better accuracy during training
+        xt1 = x
+        self.conv2.tlu_comp = None
+        xt1 = x.clone().detach()
+        x = self.conv2(x)
+        x = self.bn2(x)
+        x = self.htanh(x)
+        x = self.qact2(x)
+        # TLU-based execution
+        self.conv2.tlu_comp = 1 # for training with errors
+        x.data.copy_(self.conv2(xt1).data)
+        x = F.max_pool2d(x, 2)
+
+        # fc block 1
+        x = torch.flatten(x, 1)
+        xt2 = x
+        self.fc1.tlu_comp = None
+        xt2 = x.clone().detach()
+        x = self.fc1(x)
+        x = self.bn3(x)
+        x = self.htanh(x)
+        x = self.qact3(x)
+        # TLU-based execution
+        self.fc1.tlu_comp = 1
+        x.data.copy_(self.fc1(xt2).data)
 
         # fc block 2 does not use TLU (no binarization)
         x = self.fc2(x)
@@ -181,78 +194,6 @@ class BNN_VGG7(nn.Module):
         x = self.htanh(x)
         x = self.qact1(x)
 
-        # # if self.tlu_train is not None:
-        # # block 2
-        # xt1 = x
-        # self.conv2.tlu_comp = None
-        # xt1 = x.clone().detach()
-        # x = self.conv2(x)
-        # x = self.bn2(x)
-        # x = self.htanh(x)
-        # x = self.qact2(x)
-        # self.conv2.tlu_comp = 1 # for training with errors
-        # x.data.copy_(self.conv2(xt1).data)
-        # x = F.max_pool2d(x, 2)
-        #
-        # # block 3
-        # xt2 = x
-        # self.conv3.tlu_comp = None
-        # xt2 = x.clone().detach()
-        # x = self.conv3(x)
-        # x = self.bn3(x)
-        # x = self.htanh(x)
-        # x = self.qact3(x)
-        # self.conv3.tlu_comp = 1 # for training with errors
-        # x.data.copy_(self.conv3(xt2).data)
-        #
-        # # block 4
-        # xt3 = x
-        # self.conv4.tlu_comp = None
-        # xt3 = x.clone().detach()
-        # x = self.conv4(x)
-        # x = self.bn4(x)
-        # x = self.htanh(x)
-        # x = self.qact4(x)
-        # self.conv4.tlu_comp = 1 # for training with errors
-        # x.data.copy_(self.conv4(xt3).data)
-        # x = F.max_pool2d(x, 2)
-        #
-        # # block 5
-        # xt4 = x
-        # self.conv5.tlu_comp = None
-        # xt4 = x.clone().detach()
-        # x = self.conv5(x)
-        # x = self.bn5(x)
-        # x = self.htanh(x)
-        # x = self.qact5(x)
-        # self.conv5.tlu_comp = 1 # for training with errors
-        # x.data.copy_(self.conv5(xt4).data)
-        #
-        # # block 6
-        # xt5 = x
-        # self.conv6.tlu_comp = None
-        # xt5 = x.clone().detach()
-        # x = self.conv6(x)
-        # x = self.bn6(x)
-        # x = self.htanh(x)
-        # x = self.qact6(x)
-        # self.conv6.tlu_comp = 1 # for training with errors
-        # x.data.copy_(self.conv6(xt5).data)
-        # x = F.max_pool2d(x, 2)
-        #
-        # # block 7
-        # x = torch.flatten(x, 1)
-        # xt6 = x
-        # self.fc1.tlu_comp = None
-        # xt6 = x.clone().detach()
-        # x = self.fc1(x)
-        # x = self.bn7(x)
-        # x = self.htanh(x)
-        # x = self.qact7(x)
-        # # TLU-based execution
-        # self.fc1.tlu_comp = 1
-        # x.data.copy_(self.fc1(xt6).data)
-        # else:
         # block 2
         if self.conv2.tlu_comp is not None:
             x = self.conv2(x)
