@@ -9,11 +9,13 @@ import json
 
 from BNNModels import BNN_VGG3, BNN_VGG3_TLUTRAIN, BNN_VGG7, BNN_VGG7_TLUTRAIN
 
+from resnet import ResNet, BasicBlock
+
 from QuantizedNN import QuantizedLinear, QuantizedConv2d, QuantizedActivation
 
 def parse_args(parser):
     parser.add_argument('--model', type=str, default=None,
-                    help='VGG3/VGG7')
+                    help='VGG3/VGG7/ResNet18')
     parser.add_argument('--dataset', type=str, default=None,
                     help='MNIST/FMNIST/QMNIST/SVHN/CIFAR10')
     parser.add_argument('--train-model', type=int, default=None, help='Whether to train a model')
@@ -66,6 +68,8 @@ def get_model_and_datasets(args):
             nn_model = BNN_VGG7_TLUTRAIN
         else:
             nn_model = BNN_VGG7
+    if args.model == "ResNet18":
+        nn_model = ResNet
 
     if args.dataset == "MNIST":
         transform=transforms.Compose([
