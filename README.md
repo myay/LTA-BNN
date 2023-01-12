@@ -44,6 +44,8 @@ For training based on LTA-execution, run
 | --tlu-mode      | int, whether to use TLU-based inference, default: None |
 | --nr-xnor-gates      | int, number of xnor gates in TLU execution, default: None |
 | --train-model      | int, whether to train a model, default: None |
+| --lossfunction      | MHL, CEL |
+| --MHL-param      | int, parameter in MHL: 128|
 | --tlu-train      | int, whether TLU-based inference should be used in training, default: None |
 | --epochs      | int, number of epochs to train, default: 10|
 | --lr      | float, learning rate, default: 1.0|

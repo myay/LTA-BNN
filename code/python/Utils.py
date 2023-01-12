@@ -9,7 +9,7 @@ import json
 
 from BNNModels import BNN_VGG3, BNN_VGG3_TLUTRAIN, BNN_VGG7, BNN_VGG7_TLUTRAIN
 
-from resnet import ResNet, BasicBlock
+from resnet_bnn import ResNet, BasicBlock
 
 from QuantizedNN import QuantizedLinear, QuantizedConv2d, QuantizedActivation
 
@@ -19,6 +19,9 @@ def parse_args(parser):
     parser.add_argument('--dataset', type=str, default=None,
                     help='MNIST/FMNIST/QMNIST/SVHN/CIFAR10')
     parser.add_argument('--train-model', type=int, default=None, help='Whether to train a model')
+    parser.add_argument('--lossfunction', type=str, default=None,
+                    help='CEL/MHL')
+    parser.add_argument('--MHL-param', type=int, default=128, help='Parameter in MHL')
     parser.add_argument('--load-model-path', type=str, default=None, help='Specify path to model if it should be loaded')
     parser.add_argument('--tlu-mode', type=int, default=None, help='Whether to use TLU-based inference')
     parser.add_argument('--nr-xnor-gates', type=int, default=None, help='Number of xnor gates in TLU execution')

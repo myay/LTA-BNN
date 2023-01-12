@@ -23,8 +23,11 @@ def train(args, model, device, train_loader, optimizer, epoch):
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
         output = model(data)
-        criterion = Criterion(binary_hingeloss, "MHL_train", param=128)
-        # criterion = Criterion(nn.CrossEntropyLoss(reduction="none"), "CEL")
+        criterion = None
+        if args.lossfunction == "MHL":
+            criterion = Criterion(binary_hingeloss, "MHL_train", param=args.MHL_param)
+        if args.lossfunction == "CEL":
+            criterion = Criterion(nn.CrossEntropyLoss(reduction="none"), "CEL")
         loss = criterion.applyCriterion(output, target).mean()
         loss.backward()
         optimizer.step()

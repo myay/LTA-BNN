@@ -28,7 +28,7 @@ from QuantizedNN import QuantizedLinear, QuantizedConv2d, QuantizedActivation
 
 from BNNModels import BNN_VGG3, BNN_VGG3_TLUTRAIN, BNN_VGG7, BNN_VGG7_TLUTRAIN
 
-from resnet import ResNet, BasicBlock
+from resnet_bnn import ResNet, BasicBlock
 
 def main():
     # Training settings
