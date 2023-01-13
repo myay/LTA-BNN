@@ -28,7 +28,7 @@ from QuantizedNN import QuantizedLinear, QuantizedConv2d, QuantizedActivation
 
 from BNNModels import BNN_VGG3, BNN_VGG3_TLUTRAIN, BNN_VGG7, BNN_VGG7_TLUTRAIN
 
-from resnet_bnn import ResNet, BasicBlock
+# from resnet_bnn import ResNet, BasicBlock
 
 def main():
     # Training settings
@@ -60,11 +60,12 @@ def main():
     nn_model, dataset1, dataset2 = get_model_and_datasets(args)
 
     model = None
-    if args.model == "ResNet18":
-        # TODO: change model initialization
-        model = nn_model(BasicBlock, [2, 2, 2, 2]).to(device)
-    else:
-        model = nn_model().to(device)
+    # LTA processing cannot be applied to skip connections
+    # if args.model == "ResNet18":
+    #     # TODO: change model initialization
+    #     model = nn_model(BasicBlock, [2, 2, 2, 2]).to(device)
+    # else:
+    model = nn_model().to(device)
 
     train_loader = torch.utils.data.DataLoader(dataset1,**train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
