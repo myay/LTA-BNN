@@ -76,6 +76,8 @@ def main():
 
     current_xc = args.nr_xnor_gates
     print("\n--- XNOR GATES: ", current_xc)
+    if args.error_prob is not None:
+        print("--- ERROR RATE: ", args.error_prob)
 
     # nr of xnor gates = 1 is reserved for "no TLU computations"
     if current_xc != 1:
@@ -85,9 +87,9 @@ def main():
                 layer.nr_xnor_gates = current_xc
 
     # create experiment folder and file
-    to_dump_path = create_exp_folder(model)
-    if not os.path.exists(to_dump_path):
-        open(to_dump_path, 'w').close()
+    # to_dump_path = create_exp_folder(model)
+    # if not os.path.exists(to_dump_path):
+    #     open(to_dump_path, 'w').close()
 
     # optimizer = optim.Adam(model.parameters(), lr=args.lr)
     optimizer = Clippy(model.parameters(), lr=args.lr)
