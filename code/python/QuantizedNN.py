@@ -168,7 +168,9 @@ class QuantizedLinear(nn.Linear):
                 # print("wm_row", wm_row)
                 # print("wm_col", wm_col)
                 # print("im_col", im_col)
-
+                # apply error model
+                if self.error_model is not None:
+                    output = apply_error_model(output, self.error_model)
                 # cpu-based implementation is too slow
                 # result = []
                 # for i in range(wm_row):
@@ -313,6 +315,11 @@ class QuantizedConv2d(nn.Conv2d):
 
                 output = output_b
 
+                print("before", output)
+                # apply error model
+                if self.error_model is not None:
+                    output = apply_error_model(output, self.error_model)
+                print("after", output)    
             else:
                 output = F.conv2d(input, quantized_weight, self.bias, self.stride, self.padding, self.dilation, self.groups)
 

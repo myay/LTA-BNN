@@ -4,8 +4,22 @@ import torch.nn.functional as F
 from QuantizedNN import QuantizedLinear, QuantizedConv2d, QuantizedActivation
 from Traintest_Utils import Scale
 import binarizePM1
+import binarizePM1FI
 
 from TLU_Utils import extract_and_set_thresholds, execute_with_TLU_FashionCNN, print_layer_data, execute_with_TLU
+
+class SymmetricBitErrorsBinarizedPM1:
+    def __init__(self, method, p):
+        self.p = p
+        self.method = method
+    def updateErrorModel(self, p_updated):
+        self.p = p_updated
+    def resetErrorModel(self):
+        self.p = 0
+    def applyErrorModel(self, input):
+        return self.method(input, self.p, self.p)
+
+binarizepm1fi = SymmetricBitErrorsBinarizedPM1(binarizePM1FI.binarizeFI, 0.05)
 
 class Quantization1:
     def __init__(self, method):
@@ -22,16 +36,17 @@ class BNN_VGG3(nn.Module):
         self.name = "BNN_VGG3"
         self.tlu_train = None
         self.tlu_mode = None
+        self.error_model = binarizepm1fi
 
         self.conv1 = QuantizedConv2d(1, 64, kernel_size=3, padding=1, padding_mode = 'replicate', stride=1, quantization=binarizepm1, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.qact1 = QuantizedActivation(quantization=binarizepm1)
 
-        self.conv2 = QuantizedConv2d(64, 64, kernel_size=3, padding=1, padding_mode = 'replicate', stride=1, quantization=binarizepm1, bias=False)
+        self.conv2 = QuantizedConv2d(64, 64, kernel_size=3, padding=1, padding_mode = 'replicate', stride=1, quantization=binarizepm1, error_model=self.error_model, bias=False)
         self.bn2 = nn.BatchNorm2d(64)
         self.qact2 = QuantizedActivation(quantization=binarizepm1)
 
-        self.fc1 = QuantizedLinear(7*7*64, 2048, quantization=binarizepm1, bias=False)
+        self.fc1 = QuantizedLinear(7*7*64, 2048, quantization=binarizepm1, error_model=self.error_model, bias=False)
         self.bn3 = nn.BatchNorm1d(2048)
         self.qact3 = QuantizedActivation(quantization=binarizepm1)
 
