@@ -7,7 +7,7 @@ import os
 from datetime import datetime
 import json
 
-from BNNModels import BNN_VGG3, BNN_VGG3_TLUTRAIN, BNN_VGG7, BNN_VGG7_TLUTRAIN
+from BNNModels import BNN_VGG3, BNN_VGG3_TLUTRAIN, BNN_VGG7, BNN_VGG7_TLUTRAIN, BNN_VGG7_L
 
 # from resnet_bnn import ResNet, BasicBlock
 
@@ -19,7 +19,7 @@ def parse_args(parser):
     parser.add_argument('--dataset', type=str, default=None,
                     help='MNIST/FMNIST/QMNIST/SVHN/CIFAR10')
     parser.add_argument('--train-model', type=int, default=None, help='Whether to train a model')
-    parser.add_argument('--lossfunction', type=str, default=None,
+    parser.add_argument('--lossfunction', type=str, default="MHL",
                     help='CEL/MHL')
     parser.add_argument('--MHL-param', type=int, default=128, help='Parameter in MHL')
     parser.add_argument('--load-model-path', type=str, default=None, help='Specify path to model if it should be loaded')
@@ -71,6 +71,8 @@ def get_model_and_datasets(args):
             nn_model = BNN_VGG7_TLUTRAIN
         else:
             nn_model = BNN_VGG7
+    if args.model == "VGG7_L":
+        nn_model = BNN_VGG7_L
     # if args.model == "ResNet18":
     #     nn_model = ResNet
 
@@ -129,6 +131,16 @@ def get_model_and_datasets(args):
             ])
         dataset1 = datasets.CIFAR100('data', train=True, download=True, transform=transform_train)
         dataset2 = datasets.CIFAR100('data', train=False, transform=transform_test)
+
+    if args.dataset == "IMAGENETTE":
+        transform = transforms.Compose([
+            transforms.Resize((64, 64)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+
+        dataset1 = datasets.ImageFolder('data/imagenette2/train', transform=transform)
+        dataset2 = datasets.ImageFolder('data/imagenette2/val', transform=transform)
     return nn_model, dataset1, dataset2
 
 def dump_exp_data(model, args, all_accuracies):

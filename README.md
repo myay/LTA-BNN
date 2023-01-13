@@ -7,7 +7,7 @@ Tested setups:
 - Python 3.9.7, PyTorch 1.9.0, GeForce GTX 3080 10GB (Driver Version: 512.15, CUDA Version: 11.6)
 
 Supported:
-- Datasets: FashionMNIST, KMNIST, SVHN, CIFAR10
+- Datasets: FashionMNIST, KMNIST, SVHN, CIFAR10, IMAGENETTE
 - BNN Models: VGG3, VGG7
 - TLU computation for Linear and Conv2d layers
 - Variable number of xnor gates
@@ -39,13 +39,13 @@ For training based on LTA-execution, run
 
 | Command line parameter | Options |
 | :------------- |:-------------|
-| --model      | FC, VGG3, VGG7 |
-| --dataset      | MNIST, FMNIST, KMNIST, SVHN, CIFAR10 |
+| --model      | FC, VGG3, VGG7 (for SVHN and CIFAR10), VGG7_L (for IMAGENETTE) |
+| --dataset      | MNIST, FMNIST, KMNIST, SVHN, CIFAR10, IMAGENETTE |
 | --tlu-mode      | int, whether to use TLU-based inference, default: None |
 | --nr-xnor-gates      | int, number of xnor gates in TLU execution, default: None |
 | --train-model      | int, whether to train a model, default: None |
-| --lossfunction      | MHL, CEL |
-| --MHL-param      | int, parameter in MHL: 128|
+| --lossfunction      | MHL or CEL, default: MHL |
+| --MHL-param      | int, parameter in MHL, default: 128|
 | --tlu-train      | int, whether TLU-based inference should be used in training, default: None |
 | --epochs      | int, number of epochs to train, default: 10|
 | --lr      | float, learning rate, default: 1.0|
