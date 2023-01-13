@@ -315,11 +315,11 @@ class QuantizedConv2d(nn.Conv2d):
 
                 output = output_b
 
-                print("before", output)
+                # print("before", output[0][0])
                 # apply error model
                 if self.error_model is not None:
                     output = apply_error_model(output, self.error_model)
-                print("after", output)    
+                # print("after", output[0][0])
             else:
                 output = F.conv2d(input, quantized_weight, self.bias, self.stride, self.padding, self.dilation, self.groups)
 

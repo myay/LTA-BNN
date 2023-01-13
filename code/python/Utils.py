@@ -26,6 +26,8 @@ def parse_args(parser):
     parser.add_argument('--tlu-mode', type=int, default=None, help='Whether to use TLU-based inference')
     parser.add_argument('--nr-xnor-gates', type=int, default=None, help='Number of xnor gates in TLU execution')
     parser.add_argument('--tlu-train', type=int, default=None, help='Whether TLU-based inference should be used in training')
+    parser.add_argument('--error-prob', type=float, default=None,
+                        help='Error probability of LTA approximation output')
     parser.add_argument('--gpu-num', type=int, default=0, metavar='N', help='Specify the GPU on which the training should be performed')
     parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                         help='input batch size for training (default: 64)')

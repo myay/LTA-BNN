@@ -67,6 +67,10 @@ def main():
     # else:
     model = nn_model().to(device)
 
+    # set error model
+    if args.error_prob is not None:
+        model.error_model.p = args.error_prob
+
     train_loader = torch.utils.data.DataLoader(dataset1,**train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 

@@ -19,7 +19,7 @@ class SymmetricBitErrorsBinarizedPM1:
     def applyErrorModel(self, input):
         return self.method(input, self.p, self.p)
 
-binarizepm1fi = SymmetricBitErrorsBinarizedPM1(binarizePM1FI.binarizeFI, 0.05)
+binarizepm1fi = SymmetricBitErrorsBinarizedPM1(binarizePM1FI.binarizeFI, 0.0)
 
 class Quantization1:
     def __init__(self, method):

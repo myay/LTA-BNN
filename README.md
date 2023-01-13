@@ -43,6 +43,7 @@ For training based on LTA-execution, run
 | --dataset      | MNIST, FMNIST, KMNIST, SVHN, CIFAR10, IMAGENETTE |
 | --tlu-mode      | int, whether to use TLU-based inference, default: None |
 | --nr-xnor-gates      | int, number of xnor gates in TLU execution, default: None |
+| --error-prob      | float, probability for the outputs of the LTA approximation to flip, default: 0 |
 | --train-model      | int, whether to train a model, default: None |
 | --lossfunction      | MHL or CEL, default: MHL |
 | --MHL-param      | int, parameter in MHL, default: 128|
