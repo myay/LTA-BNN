@@ -412,6 +412,7 @@ class BNN_VGG7_L(nn.Module):
         self.name = "BNN_VGG7_L"
         self.tlu_train = None
         self.tlu_mode = None
+        self.error_model = binarizepm1fi
 
         # block 1
         self.conv1 = QuantizedConv2d(3, 128, kernel_size=3, padding=1, padding_mode = 'replicate', stride=1, quantization=binarizepm1, layerNr=1, bias=False)
@@ -419,32 +420,32 @@ class BNN_VGG7_L(nn.Module):
         self.qact1 = QuantizedActivation(quantization=binarizepm1)
 
         # block 2
-        self.conv2 = QuantizedConv2d(128, 128, kernel_size=3, padding=1, padding_mode = 'replicate', stride=1, quantization=binarizepm1, layerNr=2, bias=False)
+        self.conv2 = QuantizedConv2d(128, 128, kernel_size=3, padding=1, padding_mode = 'replicate', stride=1, quantization=binarizepm1, layerNr=2, error_model=self.error_model, bias=False)
         self.bn2 = nn.BatchNorm2d(128)
         self.qact2 = QuantizedActivation(quantization=binarizepm1)
 
         # block 3
-        self.conv3 = QuantizedConv2d(128, 256, kernel_size=3, padding=1, padding_mode = 'replicate', stride=1, quantization=binarizepm1, layerNr=3, bias=False)
+        self.conv3 = QuantizedConv2d(128, 256, kernel_size=3, padding=1, padding_mode = 'replicate', stride=1, quantization=binarizepm1, layerNr=3, error_model=self.error_model, bias=False)
         self.bn3 = nn.BatchNorm2d(256)
         self.qact3 = QuantizedActivation(quantization=binarizepm1)
 
         # block 4
-        self.conv4 = QuantizedConv2d(256, 256, kernel_size=3, padding=1, padding_mode = 'replicate', stride=1, quantization=binarizepm1, layerNr=4, bias=False)
+        self.conv4 = QuantizedConv2d(256, 256, kernel_size=3, padding=1, padding_mode = 'replicate', stride=1, quantization=binarizepm1, layerNr=4, error_model=self.error_model, bias=False)
         self.bn4 = nn.BatchNorm2d(256)
         self.qact4 = QuantizedActivation(quantization=binarizepm1)
 
         # block 5
-        self.conv5 = QuantizedConv2d(256, 512, kernel_size=3, padding=1, padding_mode = 'replicate', stride=1, quantization=binarizepm1, layerNr=5, bias=False)
+        self.conv5 = QuantizedConv2d(256, 512, kernel_size=3, padding=1, padding_mode = 'replicate', stride=1, quantization=binarizepm1, layerNr=5, error_model=self.error_model, bias=False)
         self.bn5 = nn.BatchNorm2d(512)
         self.qact5 = QuantizedActivation(quantization=binarizepm1)
 
         # block 6
-        self.conv6 = QuantizedConv2d(512, 512, kernel_size=3, padding=1, padding_mode = 'replicate', stride=1, quantization=binarizepm1, layerNr=6, bias=False)
+        self.conv6 = QuantizedConv2d(512, 512, kernel_size=3, padding=1, padding_mode = 'replicate', stride=1, quantization=binarizepm1, layerNr=6, error_model=self.error_model, bias=False)
         self.bn6 = nn.BatchNorm2d(512)
         self.qact6 = QuantizedActivation(quantization=binarizepm1)
 
         # block 7
-        self.fc1 = QuantizedLinear(8192, 1024, quantization=binarizepm1, layerNr=7, bias=False)
+        self.fc1 = QuantizedLinear(8192, 1024, quantization=binarizepm1, layerNr=7, error_model=self.error_model, bias=False)
         self.bn7 = nn.BatchNorm1d(1024)
         self.qact7 = QuantizedActivation(quantization=binarizepm1)
 

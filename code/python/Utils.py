@@ -32,7 +32,7 @@ def parse_args(parser):
     parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                         help='input batch size for training (default: 64)')
     parser.add_argument('--test-batch-size', type=int, default=256, metavar='N',
-                        help='input batch size for testing (default: 1000)')
+                        help='input batch size for testing (default: 256)')
     parser.add_argument('--epochs', type=int, default=10, metavar='N',
                         help='number of epochs to train (default: 14)')
     parser.add_argument('--lr', type=float, default=1.0, metavar='LR',
@@ -137,6 +137,7 @@ def get_model_and_datasets(args):
     if args.dataset == "IMAGENETTE":
         transform = transforms.Compose([
             transforms.Resize((64, 64)),
+            transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
