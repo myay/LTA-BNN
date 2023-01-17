@@ -74,7 +74,10 @@ def get_model_and_datasets(args):
         else:
             nn_model = BNN_VGG7
     if args.model == "VGG7_L":
-        nn_model = BNN_VGG7_L
+        if args.tlu_train is not None:
+            nn_model = BNN_VGG7_L
+        else:
+            nn_model = BNN_VGG7_L_TLUTRAIN    
     # if args.model == "ResNet18":
     #     nn_model = ResNet
 
