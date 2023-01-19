@@ -7,7 +7,7 @@ import os
 from datetime import datetime
 import json
 
-from BNNModels import BNN_VGG3, BNN_VGG3_TLUTRAIN, BNN_VGG7, BNN_VGG7_TLUTRAIN, BNN_VGG7_L
+from BNNModels import BNN_VGG3, BNN_VGG3_TLUTRAIN, BNN_VGG7, BNN_VGG7_TLUTRAIN, BNN_VGG7_L, BNN_VGG7_L_TLUTRAIN
 
 # from resnet_bnn import ResNet, BasicBlock
 
@@ -75,9 +75,9 @@ def get_model_and_datasets(args):
             nn_model = BNN_VGG7
     if args.model == "VGG7_L":
         if args.tlu_train is not None:
-            nn_model = BNN_VGG7_L
+            nn_model = BNN_VGG7_L_TLUTRAIN
         else:
-            nn_model = BNN_VGG7_L_TLUTRAIN    
+            nn_model = BNN_VGG7_L
     # if args.model == "ResNet18":
     #     nn_model = ResNet
 
