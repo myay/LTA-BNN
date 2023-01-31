@@ -2,20 +2,21 @@
 The framework for evaluating the LTA-based execution of BNNs, used in the paper with the title "Global by Local Thresholding in Binarized Neural Networksfor Efficient Crossbar Accelerator Design".
 
 Tested setups:
-- Python 3.6.9, PyTorch 1.5.0, GeForce GTX 1060 6GB (Driver Version: 440.100, CUDA Version: 10.2)
-- Python 3.6.13 (conda), 1.7.0+cu110, GeForce GTX 1080 8GB (Driver Version: 450.102.04, CUDA Version: 11.0)
+- Python 3.10.6 (pip + venv), PyTorch 1.13.1, GeForce RTX 3060 Ti 8GB (Driver Version: 525.60.13, CUDA Version: 12.0), Ubuntu 22.04.1
+- Python 3.6.9, PyTorch 1.5.0, GeForce GTX 1060 6GB (Driver Version: 440.100, CUDA Version: 10.2), Ubuntu 18.04.4
+- Python 3.6.13 (conda), 1.7.0+cu110, GeForce GTX 1080 8GB (Driver Version: 450.102.04, CUDA Version: 11.0), Ubuntu 18.04.6
 - Python 3.9.7, PyTorch 1.9.0, GeForce GTX 3080 10GB (Driver Version: 512.15, CUDA Version: 11.6)
 
 Supported:
 - Datasets: FashionMNIST, KMNIST, SVHN, CIFAR10, IMAGENETTE
 - BNN Models: VGG3, VGG7
-- TLU computation for Linear and Conv2d layers
-- Variable number of xnor gates
+- LTA computation for Linear and Conv2d layers
+- Variable number of XNOR gates
 - Additional sampling windows (1-2 more)
 - Variable majority vote shift
 - Threshold scaling (factor 2 supported)
 - Threshold correction and custom threshold mechanisms
-- (Re)Training with TLU-based execution
+- (Re)Training with LTA-based execution
 
 #### CUDA-based Binarization, LTA-based execution, and Error Injection
 
