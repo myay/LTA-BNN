@@ -38,6 +38,9 @@ For training based on LTA-execution, run
 
 ```python3 run.py --model=VGG3 --dataset=FMNIST --train-model=1 --lta-train=1 --lta-mode=1 --nr-xnor-gates=64 --batch-size=256 --epochs=100 --lr=0.001 --step-size=10 --gpu-num=0 --save-model="FMNIST_TLU_TRAIN_64"```.
 
+For more example commands, see the folder ```example_scripts/```.
+Please contact me if you have any further questions: mikail.yayla@tu-dortmund.de.
+
 | Command line parameter | Options |
 | :------------- |:-------------|
 | --model      | FC, VGG3, VGG7 (for SVHN and CIFAR10), VGG7_L (for IMAGENETTE) |
@@ -61,5 +64,3 @@ For training based on LTA-execution, run
 | --save-training-state | string, loads a training state from the specified path in the string, default: None |
 | --gpu-num | int, specifies the GPU on which the training should be performed, default: 0 |
 | --profile-time | int, Specify whether to profile the execution time by specifying the repetitions, default: None |
-
-Please contact me if you have any questions: mikail.yayla@tu-dortmund.de.
