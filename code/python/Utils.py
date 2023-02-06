@@ -23,9 +23,9 @@ def parse_args(parser):
                     help='CEL/MHL')
     parser.add_argument('--MHL-param', type=int, default=128, help='Parameter in MHL')
     parser.add_argument('--load-model-path', type=str, default=None, help='Specify path to model if it should be loaded')
-    parser.add_argument('--tlu-mode', type=int, default=None, help='Whether to use TLU-based inference')
-    parser.add_argument('--nr-xnor-gates', type=int, default=None, help='Number of xnor gates in TLU execution')
-    parser.add_argument('--tlu-train', type=int, default=None, help='Whether TLU-based inference should be used in training')
+    parser.add_argument('--lta-mode', type=int, default=None, help='Whether to use lta-based inference')
+    parser.add_argument('--nr-xnor-gates', type=int, default=None, help='Number of xnor gates in lta execution')
+    parser.add_argument('--lta-train', type=int, default=None, help='Whether lta-based inference should be used in training')
     parser.add_argument('--error-prob', type=float, default=None,
                         help='Error probability of LTA approximation output')
     parser.add_argument('--gpu-num', type=int, default=0, metavar='N', help='Specify the GPU on which the training should be performed')
@@ -64,17 +64,17 @@ def get_model_and_datasets(args):
     dataset1 = None
     dataset2 = None
     if args.model == "VGG3":
-        if args.tlu_train is not None:
+        if args.lta_train is not None:
             nn_model = BNN_VGG3_TLUTRAIN
         else:
             nn_model = BNN_VGG3
     if args.model == "VGG7":
-        if args.tlu_train is not None:
+        if args.lta_train is not None:
             nn_model = BNN_VGG7_TLUTRAIN
         else:
             nn_model = BNN_VGG7
     if args.model == "VGG7_L":
-        if args.tlu_train is not None:
+        if args.lta_train is not None:
             nn_model = BNN_VGG7_L_TLUTRAIN
         else:
             nn_model = BNN_VGG7_L

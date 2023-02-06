@@ -34,8 +34,8 @@ class BNN_VGG3(nn.Module):
         super(BNN_VGG3, self).__init__()
         self.htanh = nn.Hardtanh()
         self.name = "BNN_VGG3"
-        self.tlu_train = None
-        self.tlu_mode = None
+        self.lta_train = None
+        self.lta_mode = None
         self.error_model = binarizepm1fi
 
         self.conv1 = QuantizedConv2d(1, 64, kernel_size=3, padding=1, padding_mode = 'replicate', stride=1, quantization=binarizepm1, bias=False)
@@ -54,17 +54,17 @@ class BNN_VGG3(nn.Module):
         self.scale = Scale(init_value=1e-3)
 
     def forward(self, x):
-        if self.tlu_mode is not None:
+        if self.lta_mode is not None:
             extract_and_set_thresholds(self)
 
-        # conv2d block 1 does not use TLU (integer inputs)
+        # conv2d block 1 does not use lta (integer inputs)
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.htanh(x)
         x = self.qact1(x)
         x = F.max_pool2d(x, 2)
 
-        if self.conv2.tlu_comp is not None:
+        if self.conv2.lta_comp is not None:
             x = self.conv2(x)
         else:
             x = self.conv2(x)
@@ -75,7 +75,7 @@ class BNN_VGG3(nn.Module):
 
         # fc block 1
         x = torch.flatten(x, 1)
-        if self.fc1.tlu_comp is not None:
+        if self.fc1.lta_comp is not None:
             x = self.fc1(x)
         else:
             x = self.fc1(x)
@@ -83,7 +83,7 @@ class BNN_VGG3(nn.Module):
             x = self.htanh(x)
             x = self.qact3(x)
 
-        # fc block 2 does not use TLU (no binarization)
+        # fc block 2 does not use lta (no binarization)
         x = self.fc2(x)
         x = self.scale(x)
         return x
@@ -93,8 +93,8 @@ class BNN_VGG3_TLUTRAIN(nn.Module):
         super(BNN_VGG3_TLUTRAIN, self).__init__()
         self.htanh = nn.Hardtanh()
         self.name = "BNN_VGG3"
-        self.tlu_train = None
-        self.tlu_mode = None
+        self.lta_train = None
+        self.lta_mode = None
         self.error_model = binarizepm1fi
 
         self.conv1 = QuantizedConv2d(1, 64, kernel_size=3, padding=1, padding_mode = 'replicate', stride=1, quantization=binarizepm1, bias=False)
@@ -115,7 +115,7 @@ class BNN_VGG3_TLUTRAIN(nn.Module):
     def forward(self, x):
         extract_and_set_thresholds(self)
 
-        # conv2d block 1 does not use TLU (integer inputs)
+        # conv2d block 1 does not use lta (integer inputs)
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.htanh(x)
@@ -124,31 +124,31 @@ class BNN_VGG3_TLUTRAIN(nn.Module):
 
         # Use with clone and detach for better accuracy during training
         xt1 = x
-        self.conv2.tlu_comp = None
+        self.conv2.lta_comp = None
         xt1 = x.clone().detach()
         x = self.conv2(x)
         x = self.bn2(x)
         x = self.htanh(x)
         x = self.qact2(x)
-        # TLU-based execution
-        self.conv2.tlu_comp = 1 # for training with errors
+        # lta-based execution
+        self.conv2.lta_comp = 1 # for training with errors
         x.data.copy_(self.conv2(xt1).data)
         x = F.max_pool2d(x, 2)
 
         # fc block 1
         x = torch.flatten(x, 1)
         xt2 = x
-        self.fc1.tlu_comp = None
+        self.fc1.lta_comp = None
         xt2 = x.clone().detach()
         x = self.fc1(x)
         x = self.bn3(x)
         x = self.htanh(x)
         x = self.qact3(x)
-        # TLU-based execution
-        self.fc1.tlu_comp = 1
+        # lta-based execution
+        self.fc1.lta_comp = 1
         x.data.copy_(self.fc1(xt2).data)
 
-        # fc block 2 does not use TLU (no binarization)
+        # fc block 2 does not use lta (no binarization)
         x = self.fc2(x)
         x = self.scale(x)
         return x
@@ -158,8 +158,8 @@ class BNN_VGG7(nn.Module):
         super(BNN_VGG7, self).__init__()
         self.htanh = nn.Hardtanh()
         self.name = "BNN_VGG7"
-        self.tlu_train = None
-        self.tlu_mode = None
+        self.lta_train = None
+        self.lta_mode = None
         self.error_model = binarizepm1fi
 
         # block 1
@@ -202,17 +202,17 @@ class BNN_VGG7(nn.Module):
 
     def forward(self, x):
 
-        if self.tlu_mode is not None:
+        if self.lta_mode is not None:
             extract_and_set_thresholds(self)
 
-        # block 1 does not use TLU (integer inputs)
+        # block 1 does not use lta (integer inputs)
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.htanh(x)
         x = self.qact1(x)
 
         # block 2
-        if self.conv2.tlu_comp is not None:
+        if self.conv2.lta_comp is not None:
             x = self.conv2(x)
         else:
             x = self.conv2(x)
@@ -222,7 +222,7 @@ class BNN_VGG7(nn.Module):
         x = F.max_pool2d(x, 2)
 
         # block 3
-        if self.conv3.tlu_comp is not None:
+        if self.conv3.lta_comp is not None:
             x = self.conv3(x)
         else:
             x = self.conv3(x)
@@ -231,7 +231,7 @@ class BNN_VGG7(nn.Module):
             x = self.qact3(x)
 
         # block 4
-        if self.conv4.tlu_comp is not None:
+        if self.conv4.lta_comp is not None:
             x = self.conv4(x)
         else:
             x = self.conv4(x)
@@ -241,7 +241,7 @@ class BNN_VGG7(nn.Module):
         x = F.max_pool2d(x, 2)
 
         # block 5
-        if self.conv5.tlu_comp is not None:
+        if self.conv5.lta_comp is not None:
             x = self.conv5(x)
         else:
             x = self.conv5(x)
@@ -250,7 +250,7 @@ class BNN_VGG7(nn.Module):
             x = self.qact5(x)
 
         # block 6
-        if self.conv6.tlu_comp is not None:
+        if self.conv6.lta_comp is not None:
             x = self.conv6(x)
         else:
             x = self.conv6(x)
@@ -261,7 +261,7 @@ class BNN_VGG7(nn.Module):
 
         # block 7
         x = torch.flatten(x, 1)
-        if self.fc1.tlu_comp is not None:
+        if self.fc1.lta_comp is not None:
             x = self.fc1(x)
         else:
             x = self.fc1(x)
@@ -279,8 +279,8 @@ class BNN_VGG7_TLUTRAIN(nn.Module):
         super(BNN_VGG7_TLUTRAIN, self).__init__()
         self.htanh = nn.Hardtanh()
         self.name = "BNN_VGG7"
-        self.tlu_train = None
-        self.tlu_mode = None
+        self.lta_train = None
+        self.lta_mode = None
         self.error_model = binarizepm1fi
 
         # block 1
@@ -325,7 +325,7 @@ class BNN_VGG7_TLUTRAIN(nn.Module):
 
         extract_and_set_thresholds(self)
 
-        # block 1 does not use TLU (integer inputs)
+        # block 1 does not use lta (integer inputs)
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.htanh(x)
@@ -333,73 +333,73 @@ class BNN_VGG7_TLUTRAIN(nn.Module):
 
         # block 2
         xt1 = x
-        self.conv2.tlu_comp = None
+        self.conv2.lta_comp = None
         xt1 = x.clone().detach()
         x = self.conv2(x)
         x = self.bn2(x)
         x = self.htanh(x)
         x = self.qact2(x)
-        self.conv2.tlu_comp = 1 # for training with errors
+        self.conv2.lta_comp = 1 # for training with errors
         x.data.copy_(self.conv2(xt1).data)
         x = F.max_pool2d(x, 2)
 
         # block 3
         xt2 = x
-        self.conv3.tlu_comp = None
+        self.conv3.lta_comp = None
         xt2 = x.clone().detach()
         x = self.conv3(x)
         x = self.bn3(x)
         x = self.htanh(x)
         x = self.qact3(x)
-        self.conv3.tlu_comp = 1 # for training with errors
+        self.conv3.lta_comp = 1 # for training with errors
         x.data.copy_(self.conv3(xt2).data)
 
         # block 4
         xt3 = x
-        self.conv4.tlu_comp = None
+        self.conv4.lta_comp = None
         xt3 = x.clone().detach()
         x = self.conv4(x)
         x = self.bn4(x)
         x = self.htanh(x)
         x = self.qact4(x)
-        self.conv4.tlu_comp = 1 # for training with errors
+        self.conv4.lta_comp = 1 # for training with errors
         x.data.copy_(self.conv4(xt3).data)
         x = F.max_pool2d(x, 2)
 
         # block 5
         xt4 = x
-        self.conv5.tlu_comp = None
+        self.conv5.lta_comp = None
         xt4 = x.clone().detach()
         x = self.conv5(x)
         x = self.bn5(x)
         x = self.htanh(x)
         x = self.qact5(x)
-        self.conv5.tlu_comp = 1 # for training with errors
+        self.conv5.lta_comp = 1 # for training with errors
         x.data.copy_(self.conv5(xt4).data)
 
         # block 6
         xt5 = x
-        self.conv6.tlu_comp = None
+        self.conv6.lta_comp = None
         xt5 = x.clone().detach()
         x = self.conv6(x)
         x = self.bn6(x)
         x = self.htanh(x)
         x = self.qact6(x)
-        self.conv6.tlu_comp = 1 # for training with errors
+        self.conv6.lta_comp = 1 # for training with errors
         x.data.copy_(self.conv6(xt5).data)
         x = F.max_pool2d(x, 2)
 
         # block 7
         x = torch.flatten(x, 1)
         xt6 = x
-        self.fc1.tlu_comp = None
+        self.fc1.lta_comp = None
         xt6 = x.clone().detach()
         x = self.fc1(x)
         x = self.bn7(x)
         x = self.htanh(x)
         x = self.qact7(x)
-        # TLU-based execution
-        self.fc1.tlu_comp = 1
+        # lta-based execution
+        self.fc1.lta_comp = 1
         x.data.copy_(self.fc1(xt6).data)
 
         x = self.fc2(x)
@@ -412,8 +412,8 @@ class BNN_VGG7_L(nn.Module):
         super(BNN_VGG7_L, self).__init__()
         self.htanh = nn.Hardtanh()
         self.name = "BNN_VGG7_L"
-        self.tlu_train = None
-        self.tlu_mode = None
+        self.lta_train = None
+        self.lta_mode = None
         self.error_model = binarizepm1fi
 
         # block 1
@@ -456,17 +456,17 @@ class BNN_VGG7_L(nn.Module):
 
     def forward(self, x):
 
-        if self.tlu_mode is not None:
+        if self.lta_mode is not None:
             extract_and_set_thresholds(self)
 
-        # block 1 does not use TLU (integer inputs)
+        # block 1 does not use lta (integer inputs)
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.htanh(x)
         x = self.qact1(x)
 
         # block 2
-        if self.conv2.tlu_comp is not None:
+        if self.conv2.lta_comp is not None:
             x = self.conv2(x)
         else:
             x = self.conv2(x)
@@ -476,7 +476,7 @@ class BNN_VGG7_L(nn.Module):
         x = F.max_pool2d(x, 2)
 
         # block 3
-        if self.conv3.tlu_comp is not None:
+        if self.conv3.lta_comp is not None:
             x = self.conv3(x)
         else:
             x = self.conv3(x)
@@ -485,7 +485,7 @@ class BNN_VGG7_L(nn.Module):
             x = self.qact3(x)
 
         # block 4
-        if self.conv4.tlu_comp is not None:
+        if self.conv4.lta_comp is not None:
             x = self.conv4(x)
         else:
             x = self.conv4(x)
@@ -495,7 +495,7 @@ class BNN_VGG7_L(nn.Module):
         x = F.max_pool2d(x, 2)
 
         # block 5
-        if self.conv5.tlu_comp is not None:
+        if self.conv5.lta_comp is not None:
             x = self.conv5(x)
         else:
             x = self.conv5(x)
@@ -505,7 +505,7 @@ class BNN_VGG7_L(nn.Module):
         x = F.max_pool2d(x, 2)
 
         # block 6
-        if self.conv6.tlu_comp is not None:
+        if self.conv6.lta_comp is not None:
             x = self.conv6(x)
         else:
             x = self.conv6(x)
@@ -516,7 +516,7 @@ class BNN_VGG7_L(nn.Module):
 
         # block 7
         x = torch.flatten(x, 1)
-        if self.fc1.tlu_comp is not None:
+        if self.fc1.lta_comp is not None:
             x = self.fc1(x)
         else:
             x = self.fc1(x)
@@ -534,8 +534,8 @@ class BNN_VGG7_L_TLUTRAIN(nn.Module):
         super(BNN_VGG7_L_TLUTRAIN, self).__init__()
         self.htanh = nn.Hardtanh()
         self.name = "BNN_VGG7"
-        self.tlu_train = None
-        self.tlu_mode = None
+        self.lta_train = None
+        self.lta_mode = None
         self.error_model = binarizepm1fi
 
         # block 1
@@ -580,7 +580,7 @@ class BNN_VGG7_L_TLUTRAIN(nn.Module):
 
         extract_and_set_thresholds(self)
 
-        # block 1 does not use TLU (integer inputs)
+        # block 1 does not use lta (integer inputs)
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.htanh(x)
@@ -588,74 +588,74 @@ class BNN_VGG7_L_TLUTRAIN(nn.Module):
 
         # block 2
         xt1 = x
-        self.conv2.tlu_comp = None
+        self.conv2.lta_comp = None
         xt1 = x.clone().detach()
         x = self.conv2(x)
         x = self.bn2(x)
         x = self.htanh(x)
         x = self.qact2(x)
-        self.conv2.tlu_comp = 1 # for training with errors
+        self.conv2.lta_comp = 1 # for training with errors
         x.data.copy_(self.conv2(xt1).data)
         x = F.max_pool2d(x, 2)
 
         # block 3
         xt2 = x
-        self.conv3.tlu_comp = None
+        self.conv3.lta_comp = None
         xt2 = x.clone().detach()
         x = self.conv3(x)
         x = self.bn3(x)
         x = self.htanh(x)
         x = self.qact3(x)
-        self.conv3.tlu_comp = 1 # for training with errors
+        self.conv3.lta_comp = 1 # for training with errors
         x.data.copy_(self.conv3(xt2).data)
 
         # block 4
         xt3 = x
-        self.conv4.tlu_comp = None
+        self.conv4.lta_comp = None
         xt3 = x.clone().detach()
         x = self.conv4(x)
         x = self.bn4(x)
         x = self.htanh(x)
         x = self.qact4(x)
-        self.conv4.tlu_comp = 1 # for training with errors
+        self.conv4.lta_comp = 1 # for training with errors
         x.data.copy_(self.conv4(xt3).data)
         x = F.max_pool2d(x, 2)
 
         # block 5
         xt4 = x
-        self.conv5.tlu_comp = None
+        self.conv5.lta_comp = None
         xt4 = x.clone().detach()
         x = self.conv5(x)
         x = self.bn5(x)
         x = self.htanh(x)
         x = self.qact5(x)
-        self.conv5.tlu_comp = 1 # for training with errors
+        self.conv5.lta_comp = 1 # for training with errors
         x.data.copy_(self.conv5(xt4).data)
         x = F.max_pool2d(x, 2)
 
         # block 6
         xt5 = x
-        self.conv6.tlu_comp = None
+        self.conv6.lta_comp = None
         xt5 = x.clone().detach()
         x = self.conv6(x)
         x = self.bn6(x)
         x = self.htanh(x)
         x = self.qact6(x)
-        self.conv6.tlu_comp = 1 # for training with errors
+        self.conv6.lta_comp = 1 # for training with errors
         x.data.copy_(self.conv6(xt5).data)
         x = F.max_pool2d(x, 2)
 
         # block 7
         x = torch.flatten(x, 1)
         xt6 = x
-        self.fc1.tlu_comp = None
+        self.fc1.lta_comp = None
         xt6 = x.clone().detach()
         x = self.fc1(x)
         x = self.bn7(x)
         x = self.htanh(x)
         x = self.qact7(x)
-        # TLU-based execution
-        self.fc1.tlu_comp = 1
+        # lta-based execution
+        self.fc1.lta_comp = 1
         x.data.copy_(self.fc1(xt6).data)
 
         x = self.fc2(x)

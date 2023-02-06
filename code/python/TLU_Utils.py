@@ -32,7 +32,7 @@ def extract_and_set_thresholds(model):
                 # print("threshold", threshold)
     # print("thresholds", thresholds)
 
-    # first layer does not use TLU computations
+    # first layer does not use lta computations
     thresholds_nofirst = thresholds[1:]
     # print("thresholds_nofirst", len(thresholds_nofirst))
     # print("---")
@@ -56,7 +56,7 @@ def extract_and_set_thresholds(model):
                 if layer.first_or_last_layer is None:
                     layer.thresholds = thresholds_nofirst[idx]
                     idx += 1
-                    layer.tlu_comp = 1
+                    layer.lta_comp = 1
 
 import numpy as np
 def execute_with_TLU(model, device, test_loader, xnor_gates_list):
@@ -112,14 +112,14 @@ def execute_with_TLU_FashionCNN(model, device, test_loader, xnor_gates_list):
     # extract and set thresholds
     extract_and_set_thresholds(model)
 
-    # activate TLU computation, set number of xnor gates, and nr of additional samples (0 by default) for each layer here
-    model.conv2.tlu_comp = None # set to 1 to activate
+    # activate lta computation, set number of xnor gates, and nr of additional samples (0 by default) for each layer here
+    model.conv2.lta_comp = None # set to 1 to activate
     # model.conv2.nr_xnor_gates = 64
     model.conv2.nr_additional_samples = 0
     model.conv2.majv_shift = 0
     model.conv2.threshold_scaling = 0
 
-    model.fc1.tlu_comp = 1 # set to 1 to activate
+    model.fc1.lta_comp = 1 # set to 1 to activate
     # model.fc1.nr_xnor_gates = 64
     model.fc1.nr_additional_samples = 0
     model.fc1.majv_shift = 0
@@ -166,12 +166,12 @@ def execute_with_TLU_FashionCNN(model, device, test_loader, xnor_gates_list):
 
 def print_layer_data(model):
     layer_idx = 0
-    print("\n--- NN TLU CONFIGS ---\n")
+    print("\n--- NN lta CONFIGS ---\n")
     for layer in model.children():
         with torch.no_grad():
             if isinstance(layer, (nn.Conv2d, nn.Linear)):
                 print(">>> Layer: {}".format(layer_idx))
                 print("Layer name: ", layer.name)
-                print("TLU computation: ", layer.tlu_comp)
+                print("lta computation: ", layer.lta_comp)
                 print("#xnor gates: ", layer.nr_xnor_gates)
                 layer_idx += 1

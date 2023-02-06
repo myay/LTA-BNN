@@ -1,5 +1,5 @@
 # LTA-BNN
-The framework for evaluating the LTA-based execution of BNNs, used in the paper with the title "Global by Local Thresholding in Binarized Neural Networksfor Efficient Crossbar Accelerator Design".
+The framework for evaluating the LTA-based execution of BNNs, used in the paper with the title "Global by Local Thresholding in Binarized Neural Networksfor Efficient Crossbar Accelerator Design". Note that in the code, "LTA" and "TLU" are used synonymously.
 
 Tested setups:
 - Python 3.10.6 (pip + venv), PyTorch 1.13.1, GeForce RTX 3060 Ti 8GB (Driver Version: 525.60.13, CUDA Version: 12.0), Ubuntu 22.04.1

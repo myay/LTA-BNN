@@ -80,7 +80,7 @@ class QuantizedLinear(nn.Linear):
         self.quantize_eval = kwargs.pop('quantize_eval', True)
         self.first_or_last_layer = kwargs.pop('first_or_last', None)
         self.training = None
-        self.tlu_comp = None
+        self.lta_comp = None
         self.thresholds = None
         self.nr_xnor_gates = None
         self.nr_additional_samples = 0
@@ -111,9 +111,9 @@ class QuantizedLinear(nn.Linear):
 
             output = None
 
-            # TLU-computation
-            if self.tlu_comp is not None:
-                # print("Executing with TLU: ", self.name)
+            # lta-computation
+            if self.lta_comp is not None:
+                # print("Executing with lta: ", self.name)
                 # print("Nr. of xnor gates: ", self.nr_xnor_gates)
                 # print("Input shape: ", input.shape)
                 # print("Weight shape: ", quantized_weight.shape)
@@ -220,7 +220,7 @@ class QuantizedConv2d(nn.Conv2d):
         self.quantize_eval = kwargs.pop('quantize_eval', True)
         self.first_or_last_layer = kwargs.pop('first_or_last', None)
         self.training = None
-        self.tlu_comp = None
+        self.lta_comp = None
         self.thresholds = None
         self.nr_xnor_gates = None
         self.nr_additional_samples = 0
@@ -255,10 +255,10 @@ class QuantizedConv2d(nn.Conv2d):
             # 2 nr neurons
             # 3
 
-            # TLU-computation
-            if self.tlu_comp is not None:
-                # print("Executing with TLU: ", self.name)
-                # print("Executing with TLU: ", self.tlu_comp)
+            # lta-computation
+            if self.lta_comp is not None:
+                # print("Executing with lta: ", self.name)
+                # print("Executing with lta: ", self.lta_comp)
                 # print("Nr. of xnor gates: ", self.nr_xnor_gates)
 
                 # get tensors in form of matrix multiplication
