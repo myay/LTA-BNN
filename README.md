@@ -42,13 +42,13 @@ For training based on LTA-execution, run
 | :------------- |:-------------|
 | --model      | FC, VGG3, VGG7 (for SVHN and CIFAR10), VGG7_L (for IMAGENETTE) |
 | --dataset      | MNIST, FMNIST, KMNIST, SVHN, CIFAR10, IMAGENETTE |
-| --tlu-mode      | int, whether to use TLU-based inference, default: None |
-| --nr-xnor-gates      | int, number of xnor gates in TLU execution, default: None |
+| --lta-mode      | int, whether to use LTA-based inference, default: None |
+| --nr-xnor-gates      | int, number of xnor gates in LTA execution, default: None |
 | --error-prob      | float, probability for the outputs of the LTA approximation to flip, default: 0 |
 | --train-model      | int, whether to train a model, default: None |
 | --lossfunction      | MHL or CEL, default: MHL |
 | --MHL-param      | int, parameter in MHL, default: 128|
-| --tlu-train      | int, whether TLU-based inference should be used in training, default: None |
+| --LTA-train      | int, whether LTA-based inference should be used in training, default: None |
 | --epochs      | int, number of epochs to train, default: 10|
 | --lr      | float, learning rate, default: 1.0|
 | --gamma      | float, learning rate step, default: 0.5|
