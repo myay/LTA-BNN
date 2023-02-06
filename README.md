@@ -32,11 +32,11 @@ After successful installation of all kernels, for training run
 
 Then, for LTA-based inference, run
 
-```python3 run.py --model=VGG3 --dataset=FMNIST --load-model-path="model_name.pt" --tlu-mode=1 --test-batch-size=1000 --gpu-num=0```.
+```python3 run.py --model=VGG3 --dataset=FMNIST --load-model-path="model_name.pt" --lta-mode=1 --nr-xnor-gates=64 --test-batch-size=1000 --gpu-num=0```.
 
 For training based on LTA-execution, run
 
-```python3 run.py --model=VGG3 --dataset=FMNIST --train-model=1 --tlu-train=1 --tlu-mode=1 --batch-size=256 --epochs=100 --lr=0.001 --step-size=10 --gpu-num=0 --save-model="FMNIST_TLU_TRAIN"```.
+```python3 run.py --model=VGG3 --dataset=FMNIST --train-model=1 --lta-train=1 --lta-mode=1 --nr-xnor-gates=64 --batch-size=256 --epochs=100 --lr=0.001 --step-size=10 --gpu-num=0 --save-model="FMNIST_TLU_TRAIN_64"```.
 
 | Command line parameter | Options |
 | :------------- |:-------------|
@@ -48,7 +48,7 @@ For training based on LTA-execution, run
 | --train-model      | int, whether to train a model, default: None |
 | --lossfunction      | MHL or CEL, default: MHL |
 | --MHL-param      | int, parameter in MHL, default: 128|
-| --LTA-train      | int, whether LTA-based inference should be used in training, default: None |
+| --lta-train      | int, whether LTA-based inference should be used in training, default: None |
 | --epochs      | int, number of epochs to train, default: 10|
 | --lr      | float, learning rate, default: 1.0|
 | --gamma      | float, learning rate step, default: 0.5|
