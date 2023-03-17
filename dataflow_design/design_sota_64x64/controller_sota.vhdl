@@ -27,10 +27,10 @@ begin
   -- Single in multiple out buffer (SIMO)
   process(clk) begin
     if rising_edge(clk) then
-      mem_w <= (others => '0');
       for i in 1 to 64 loop
         mem_i(64*i-1 downto 64*(i-1)) <= xnor_input;
       end loop;
+      mem_w <= weights;
     end if;
   end process;
   o_result <= mem_o;
